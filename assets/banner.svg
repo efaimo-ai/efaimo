@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="efaimo. Know what you feed your agent.">
+  <style>
+    .wm { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  </style>
+
+  <rect x="1" y="1" width="1198" height="358" rx="16" fill="#08090D" stroke="#191D26" stroke-width="1"/>
+
+  <svg x="120" y="121" width="118" height="118" viewBox="0 0 48 48">
+    <path fill="#FFFFFF" d="M14.972 4.625Q16.934 3.108 19.342 3.696L28.028 5.816Q30.437 6.403 29.921 8.828L23.061 41.104Q22.545 43.53 20.12 44.045L18.734 44.34Q16.308 44.855 14.393 43.281L3.872 34.629Q1.956 33.054 1.993 30.575L2.197 16.954Q2.234 14.475 4.195 12.958ZM36.609 8.808Q36.814 7.841 37.773 8.075L37.773 8.075Q38.733 8.31 39.148 9.206L45.502 22.92Q46.545 25.17 45.434 27.388L39.342 39.572Q38.232 41.789 35.808 42.305L31.615 43.195Q29.19 43.711 29.705 41.286Z"/>
+  </svg>
+
+  <text x="284" y="196" class="wm" font-size="82" font-weight="600" letter-spacing="-1.5" fill="#E9EDF3">efaimo</text>
+  <text x="288" y="238" class="wm" font-size="24" fill="#79828F">The linter for Agent Skills and MCP servers.</text>
+</svg>

@@ -1,0 +1,77 @@
+{
+  "name": "efaimo",
+  "version": "0.1.0",
+  "description": "Audit what your agent loads: quality and context cost for MCP servers and Agent Skills",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "agent-skills",
+    "skills",
+    "audit",
+    "lint",
+    "tokens",
+    "context-window",
+    "claude",
+    "ai-agents",
+    "cli"
+  ],
+  "license": "Apache-2.0",
+  "author": "efaimo ai <hello@efaimo.ai> (https://efaimo.ai)",
+  "homepage": "https://github.com/efaimo-ai/efaimo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/efaimo-ai/efaimo.git"
+  },
+  "bugs": "https://github.com/efaimo-ai/efaimo/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "efaimo": "dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "SKILL.md",
+    "NOTICE",
+    "CHANGELOG.md",
+    "docs/METHODOLOGY.md",
+    "docs/RULES.md",
+    "docs/INTEGRATIONS.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm run build && npm run test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^15.0.0",
+    "cross-spawn": "^7.0.6",
+    "gpt-tokenizer": "^3.4.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

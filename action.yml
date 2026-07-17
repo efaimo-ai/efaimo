@@ -1,0 +1,23 @@
+name: "efaimo"
+description: "Audit MCP servers and Agent Skills for quality and context-window cost"
+branding:
+  icon: "activity"
+  color: "blue"
+inputs:
+  command:
+    description: 'efaimo subcommand and args, e.g. `check --skill ./skills` or `weigh "npx -y my-server"`'
+    required: true
+  version:
+    description: "efaimo version to run (npm dist-tag or version)"
+    required: false
+    default: "latest"
+  working-directory:
+    description: "directory to run in"
+    required: false
+    default: "."
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npx -y efaimo@${{ inputs.version }} ${{ inputs.command }}

@@ -1,0 +1,15 @@
+# Example: drop this in a downstream MCP-server repo to gate context cost on PRs.
+# Commit a base.json baseline first:
+#   npx efaimo weigh "npx -y your-server" --out base.json
+name: context-budget
+on: [pull_request]
+jobs:
+  weigh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: fail if tool definitions grew more than 10%
+        run: npx -y efaimo weigh "npx -y your-server" --diff base.json --allow-increase 10

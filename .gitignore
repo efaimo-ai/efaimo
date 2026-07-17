@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+*.log
+.DS_Store
+.efaimo/
+*.local.*
+.env
+.env.*
+!.env.example

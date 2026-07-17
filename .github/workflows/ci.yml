@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        # Node 22 is the active LTS; Node 20 is EOL and below pnpm's floor.
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+      - name: dogfood (check own SKILL.md)
+        run: node dist/cli.js check --skill ./SKILL.md --strict
+      - name: smoke (weigh a real MCP server)
+        shell: bash
+        # Network-dependent (npx cold-download + boot); retry so a slow runner is
+        # not a red build. The first attempt warms the npx cache for the rest.
+        run: |
+          for i in 1 2 3; do
+            node dist/cli.js weigh "npx -y @modelcontextprotocol/server-everything" --timeout 180 && exit 0
+            echo "smoke attempt $i failed; retrying in 5s"; sleep 5
+          done
+          exit 1

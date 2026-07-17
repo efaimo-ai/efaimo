@@ -1,0 +1,22 @@
+# efaimo test scenario: a skill that encodes a convention the model cannot guess.
+# Contrast with scenario.example.yaml, where a capable model needs no skill.
+# Real run (spends tokens): npx efaimo test examples/scenario.crm.yaml --live
+name: contoso-crm-import helps on an unknowable format
+skill: ./contoso-crm-import
+model: claude-sonnet-5
+trials: 8
+task: |
+  Prepare these contacts for Contoso CRM import:
+
+  Ada Lovelace, ADA@Example.com
+  Grace Hopper, Grace.Hopper@NAVY.MIL
+  Alan Turing, a.turing@Bletchley.uk
+judge: |
+  PASS if the answer contains these three rows (ignore any surrounding prose or code
+  fences), each semicolon-delimited as member_id;display_name;email;source:
+    LOV-0001;Ada Lovelace;ada@example.com;import-2026
+    HOP-0002;Grace Hopper;grace.hopper@navy.mil;import-2026
+    TUR-0003;Alan Turing;a.turing@bletchley.uk;import-2026
+  The member_id (first three letters of the last name uppercased, a hyphen, then a
+  four-digit zero-padded row number), the lowercased email, and the literal source
+  value import-2026 must all be exact. Any other format is FAIL.

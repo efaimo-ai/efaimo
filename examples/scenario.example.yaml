@@ -1,0 +1,17 @@
+# efaimo test scenario: does the csv-cleanup skill actually help?
+# Dry run (no API calls):   npx efaimo test examples/scenario.example.yaml
+# Real run (spends tokens): npx efaimo test examples/scenario.example.yaml --live
+name: csv-cleanup helps on a messy CSV
+skill: ./csv-cleanup
+model: claude-sonnet-5
+trials: 8
+task: |
+  Clean this CSV and summarize what you changed:
+
+  name , email ,city
+  Ada ,ada@example.com, London
+  Ada ,ada@example.com, London
+  Grace,grace@example.com ,New York
+judge: |
+  PASS only if the answer (a) removes the duplicate Ada row, (b) trims the stray
+  whitespace around cells, and (c) states the final row count. Otherwise FAIL.
