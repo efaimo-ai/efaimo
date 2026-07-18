@@ -1,11 +1,13 @@
 name: release
 
-# Publishes to npm with provenance via OIDC Trusted Publishing when a v* tag is
-# pushed. No secret token: the id-token permission lets npm authenticate to the
-# registry through the trusted publisher (efaimo-ai/efaimo + release.yml)
-# configured on npmjs.com. workflow_dispatch is kept for manual releases; a
-# dispatch on an already-published version stops at npm's version-conflict
-# check, which doubles as an auth smoke test without republishing.
+# The whole release, start to finish, on a v*.*.* tag: publish to npm with
+# provenance via OIDC Trusted Publishing, cut the GitHub Release, and move the
+# major tag. No secret is involved and nothing here should be done by hand.
+#
+# Do NOT run `gh release create` locally. GitHub attributes a release to
+# whoever created it, so a hand-cut release publishes the operator's personal
+# account on the release page; v0.1.0 was cut that way before this automation
+# existed and is stamped with one. Releases made here are github-actions[bot].
 on:
   push:
     # Semver tags only. The docs tell action users to reference the moving major
@@ -17,7 +19,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # cut the Release and move the major tag
       id-token: write # OIDC trusted publishing + provenance
     steps:
       - uses: actions/checkout@v4
@@ -38,3 +40,40 @@ jobs:
       # an older 11.x, so upgrade npm before publishing.
       - run: npm install -g npm@latest
       - run: npm publish --provenance --access public
+
+      # Everything below is tag-only and runs after a successful publish, so a
+      # Release never announces a version the registry rejected. (A
+      # workflow_dispatch run stops at the publish step, which is what makes it
+      # a safe auth smoke test.)
+      - name: cut the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists; leaving it alone"
+            exit 0
+          fi
+          # Prefer this version's curated CHANGELOG section; stop at the next
+          # heading or at the link definitions that close the file.
+          awk -v v="${GITHUB_REF_NAME#v}" '
+            $0 ~ "^## \\[" v "\\]" { f = 1; next }
+            f && (/^## \[/ || /^\[[^]]*\]: http/) { exit }
+            f { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            gh release create "$GITHUB_REF_NAME" --title "efaimo $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            echo "no CHANGELOG section for $GITHUB_REF_NAME; generating notes from commits"
+            gh release create "$GITHUB_REF_NAME" --title "efaimo $GITHUB_REF_NAME" --generate-notes
+          fi
+
+      # `uses: efaimo-ai/efaimo@v0` is what the README documents, so the major
+      # tag has to follow the release or that line silently serves old code.
+      - name: move the major tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          major="v${ver%%.*}"
+          git tag -f "$major"
+          git push -f origin "$major"

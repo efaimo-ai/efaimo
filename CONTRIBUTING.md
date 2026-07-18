@@ -49,3 +49,29 @@ guessing.
 Write clear, imperative commit messages scoped to one change; explain the why in
 the body when it is not obvious. CI runs typecheck, build, tests, dogfood, and a
 live smoke on Ubuntu and Windows across Node 22/24, green before review.
+
+## Releasing
+
+Releases are automated end to end. **Do not create a GitHub Release by hand.**
+GitHub attributes a release to whoever created it, so a release cut with a
+personal `gh release create` publishes that person's account on the release
+page; releases cut by the workflow are `github-actions[bot]`.
+
+1. Add a `## [x.y.z]` section to `CHANGELOG.md`. Its body becomes the release
+   notes verbatim.
+2. Bump `version` in `package.json` and `src/version.ts` (a test fails if the
+   two disagree).
+3. Commit, then push the tag:
+
+```bash
+git tag vx.y.z && git push origin vx.y.z
+```
+
+`.github/workflows/release.yml` takes it from there: typecheck, build, test,
+dogfood, publish to npm with provenance via OIDC Trusted Publishing (no token
+anywhere), cut the GitHub Release from the CHANGELOG section, and move the `v0`
+major tag so `uses: efaimo-ai/efaimo@v0` keeps pointing at the newest release.
+
+Publishing authenticates through npm's trusted publisher for this repository and
+this workflow file. Renaming the workflow, or publishing from a different one,
+breaks that trust until the publisher is reconfigured on npmjs.com.
