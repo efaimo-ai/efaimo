@@ -42,7 +42,7 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 
 | skill | source | grade | errors | warnings | info |
 |---|---|---|---|---|---|
-| `claude-api` | anthropics-skills | C (71) | 1 | 2 | 4 |
+| `claude-api` | anthropics-skills | C (73) | 1 | 2 | 4 |
 | `writing-skills` | obra-superpowers | A (90) | 0 | 2 | 0 |
 | `pptx` | anthropics-skills | A (94) | 0 | 1 | 1 |
 | `subagent-driven-development` | obra-superpowers | A (95) | 0 | 1 | 0 |
@@ -51,9 +51,9 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 | `mcp-builder` | anthropics-skills | A (96) | 0 | 0 | 4 |
 | `xlsx` | anthropics-skills | A (99) | 0 | 0 | 1 |
 | `doc-coauthoring` | anthropics-skills | A (99) | 0 | 0 | 1 |
-| `algorithmic-art` | anthropics-skills | A (99) | 0 | 0 | 1 |
 | `applying-brand-guidelines` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
 | `cookbook-audit` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
+| `writing-plans` | obra-superpowers | A (100) | 0 | 0 | 0 |
 
 ## Full corpus
 
@@ -61,13 +61,13 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 
 | skill | source | grade |
 |---|---|---|
-| `algorithmic-art` | anthropics-skills | A (99) |
+| `algorithmic-art` | anthropics-skills | A (100) |
 | `analyzing-financial-statements` | anthropics-claude-cookbooks | A (100) |
 | `applying-brand-guidelines` | anthropics-claude-cookbooks | A (99) |
 | `brainstorming` | obra-superpowers | A (100) |
 | `brand-guidelines` | anthropics-skills | A (100) |
 | `canvas-design` | anthropics-skills | A (100) |
-| `claude-api` | anthropics-skills | C (71) |
+| `claude-api` | anthropics-skills | C (73) |
 | `cookbook-audit` | anthropics-claude-cookbooks | A (99) |
 | `creating-financial-models` | anthropics-claude-cookbooks | A (100) |
 | `dispatching-parallel-agents` | obra-superpowers | A (100) |

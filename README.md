@@ -35,11 +35,11 @@ Point it at one skill or a whole folder. It validates each skill against the
 
 ```text
 check skill  claude-api
-grade C (71)   1 error  2 warnings  4 info
+grade C (73)   1 error  2 warnings  4 info
 
   x S101  description is 1068 chars (spec max 1024)
   ! S104  instructions are ~18.4k tokens (spec recommends staying under 5k)
-          fix: move detail into references/ files loaded on demand
+          fix: move detail into references/ files loaded on demand (progressive disclosure)
   ! S104  SKILL.md is 570 lines (spec recommends under 500)
   i S104  metadata level is ~294 tokens; the spec targets ~100 and this loads at
           startup for every installed skill

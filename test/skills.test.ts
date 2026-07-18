@@ -38,7 +38,15 @@ describe("skill parsing", () => {
     expect(ids.has("S105")).toBe(true); // injection (now info)
     expect(ids.has("S106")).toBe(true); // missing markdown-link ref (error)
     expect(report.counts.error).toBeGreaterThan(0);
-    expect(["D", "F"]).toContain(report.grade.letter);
+    // C, not D/F: the grade reflects the real defects (broken ref, bad
+    // frontmatter) and NOT the S105 injection hits, which are shallow
+    // heuristics that src/rules/injection.ts says must never move a grade.
+    // They used to, silently, which is what dragged this fixture two letters
+    // below what its actual errors earn.
+    expect(["C", "D", "F"]).toContain(report.grade.letter);
+    const injection = report.findings.filter((f) => f.ruleId === "S105");
+    expect(injection.length).toBeGreaterThan(0);
+    expect(injection.every((f) => f.graded === false)).toBe(true);
   });
 
   it("gives the good skill a clean bill of health", async () => {
@@ -61,7 +69,10 @@ describe("skill parsing", () => {
     const good = res.perSkill.find((s) => s.name === "good-skill")!;
     const bad = res.perSkill.find((s) => s.name === "totally-different-name" || s.dir.endsWith("bad-skill"))!;
     expect(["A", "B"]).toContain(good.report.grade.letter);
-    expect(["D", "F"]).toContain(bad.report.grade.letter);
+    // Still clearly worse than the good skill, and still scored only on its
+    // real errors; see the injection note in the bad-skill test above.
+    expect(["C", "D", "F"]).toContain(bad.report.grade.letter);
+    expect(bad.report.grade.score).toBeLessThan(good.report.grade.score);
   });
 
   it("detects a cross-tool-steering instruction (regression: adjective between verb and 'tools')", () => {

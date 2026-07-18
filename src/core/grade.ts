@@ -4,7 +4,13 @@ const PENALTY: Record<string, number> = { error: 15, warn: 5, info: 1 };
 
 export function gradeFindings(findings: Finding[]): GradeInfo {
   let score = 100;
-  for (const f of findings) score -= PENALTY[f.severity] ?? 0;
+  // `graded: false` findings are reported but never scored; see Finding.graded
+  // and src/rules/injection.ts. Everything else counts, so a new rule has to
+  // opt out on purpose rather than by forgetting to opt in.
+  for (const f of findings) {
+    if (f.graded === false) continue;
+    score -= PENALTY[f.severity] ?? 0;
+  }
   score = Math.max(0, score);
   const letter = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : score >= 60 ? "D" : "F";
   return { score, letter };

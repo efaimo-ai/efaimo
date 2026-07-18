@@ -9,6 +9,15 @@ export interface Finding {
   target?: string;
   detail?: string;
   fixHint?: string;
+  /**
+   * Set false by findings that must be reported but must not affect the score.
+   * Today that is the injection heuristics (E130, S105): they are shallow
+   * patterns an attacker evades trivially, and `src/rules/injection.ts` says
+   * so in its own comment. Letting them dock the grade made a linter hint
+   * behave like a security verdict, and ten of them cost a full letter.
+   * Defaults to graded, so a rule opts out deliberately or not at all.
+   */
+  graded?: boolean;
 }
 
 export type Surface = "mcp" | "skill";

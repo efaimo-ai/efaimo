@@ -105,7 +105,14 @@ export function scanTextForInjection(
         // Deliberately info: these are shallow heuristics an attacker evades
         // trivially. Surfacing them must never move a grade or fail CI, or a
         // clean report would read as a security pass (it is not one).
+        //
+        // `graded: false` is what makes the first half of that true. It used
+        // to be a comment only, while gradeFindings charged every info finding
+        // a point, so ten heuristic hits quietly cost a whole letter -- the
+        // exact "clean report reads as a security verdict" failure this
+        // comment was written to prevent, running in reverse.
         severity: "info",
+        graded: false,
         title: "possible injection pattern (heuristic)",
         message: `${opts.where}: ${p.label}`,
         target: opts.where,

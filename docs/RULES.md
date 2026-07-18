@@ -52,7 +52,7 @@ so in their detail line.
 | E126 | warn/info | tool names mix conventions or exceed 64 chars |
 | E127 | warn | a single tool definition costs 800+ tokens (needs `weigh` data) |
 | E128 | warn | total tool-definition tax over ~10k / ~25k tokens, estimated (needs `weigh` data); hard CI failure is left to the `--max-tokens`/`--diff` gate |
-| E130 | info | instruction-injection patterns in a tool description or server instructions (shallow heuristic, never a security verdict; use a dedicated scanner for depth) |
+| E130 | info | instruction-injection patterns in a tool description or server instructions (shallow heuristic, never a security verdict; use a dedicated scanner for depth). **Reported but never scored** |
 
 ## Skills (S101-S106)
 
@@ -62,7 +62,7 @@ so in their detail line.
 | S102 | warn/info | description too thin or never says when to use the skill | agentskills.io |
 | S103 | error/warn | duplicate skill names, or two skills with heavily overlapping descriptions (trigger collision) | internal |
 | S104 | warn/info | metadata over ~100 tokens, body over ~5k tokens or 500 lines, or long body with no progressive disclosure | agentskills.io |
-| S105 | info | instruction-injection patterns in the skill body or description (shallow heuristic, never a security verdict) | internal |
+| S105 | info | instruction-injection patterns in the skill body or description (shallow heuristic, never a security verdict). **Reported but never scored** | internal |
 | S106 | error/warn/info | referenced file missing, escaping the skill dir (`..`), or nested more than one level deep | agentskills.io |
 
 ## Notes on heuristics
