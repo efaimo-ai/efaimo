@@ -204,7 +204,31 @@ efaimo is the one tool that covers the whole audit surface. As of mid-2026:
 
 efaimo runs the official conformance suite for you (`check --conformance` on
 http targets) and complements security scanners such as Snyk agent-scan and the
-skills installer (`npx skills`) rather than replacing them.
+skills installer (`npx skills`) rather than replacing them. If your server is
+built on the TypeScript SDK, efaimo tells you what breaks and why, and
+[`@modelcontextprotocol/codemod`](https://www.npmjs.com/package/@modelcontextprotocol/codemod)
+(beta) rewrites the SDK v1 to v2 call sites for you. Diff, codemod, re-check.
+
+### "Doesn't tool search already solve this?"
+
+Partly, and that is the point. Anthropic ships a
+[tool search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-search-tool):
+mark tools `defer_loading: true` and the model discovers schemas on demand
+instead of carrying all of them, with discovered schemas appended so the prompt
+cache survives. Where it applies, it is a better fix than anything a linter can
+tell you, and efaimo's own rules point at it (E127 and E128 suggest deferred
+loading as a remedy).
+
+It does not make measurement unnecessary, for three reasons. It is opt-in per
+tool, so somebody has to decide which tools are worth deferring, and that
+decision needs the per-tool numbers. It is a client-side feature, so it says
+nothing about what your server publishes to hosts that do not implement it.
+And a mitigation you cannot measure is a mitigation you are trusting on faith:
+`weigh` reports the definitions your server actually ships, which is the input
+every mitigation operates on.
+
+If deferred loading covers your whole setup, you may not need this tool. Run
+`weigh` once and find out; that answer is worth more than our opinion.
 
 ## Install
 
