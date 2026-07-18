@@ -36,6 +36,14 @@ export async function weighServer(
     claudeStyle: count(serializeClaudeStyle(intro.tools)),
     openaiTools: count(serializeOpenAITools(intro.tools)),
   };
+  // Per-tool rows count each tool's bare definition line; the total counts the
+  // <functions> block around them. Report the wrapper explicitly so the rows
+  // reconcile with the total (clamped: tokenizer merges across boundaries can
+  // in principle make the residual negative on other serializations).
+  const framingTokens = Math.max(
+    0,
+    totals.claudeStyle - perTool.reduce((s, t) => s + t.tokens.claudeStyle, 0),
+  );
 
   const notes = [
     "token counts are estimates using the o200k_base tokenizer; hosts add fixed framing text on top (see docs/METHODOLOGY.md)",
@@ -62,6 +70,7 @@ export async function weighServer(
     promptCount: intro.prompts.length,
     perTool,
     totals,
+    framingTokens,
     instructionsTokens: count(intro.instructions ?? ""),
     anthropicExactTotal,
     notes,

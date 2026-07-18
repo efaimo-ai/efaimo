@@ -9,6 +9,14 @@ function esc(s: string): string {
   return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
+function findingsTable(lines: string[], findings: CheckReport["findings"]): void {
+  lines.push("| severity | rule | finding |");
+  lines.push("|---|---|---|");
+  for (const f of findings) {
+    lines.push(`| ${SEV_LABEL[f.severity]} | ${f.ruleId} | ${esc(f.message)} |`);
+  }
+}
+
 export function renderCheckMarkdown(report: CheckReport): string {
   const lines: string[] = [];
   lines.push(`## efaimo check (${report.surface}): grade ${report.grade.letter} (${report.grade.score})`);
@@ -16,12 +24,18 @@ export function renderCheckMarkdown(report: CheckReport): string {
   lines.push(`target: \`${report.target}\``);
   lines.push("");
   if (!report.findings.length) {
-    lines.push("no findings. clean.");
+    lines.push(report.readiness ? "no quality findings. clean." : "no findings. clean.");
   } else {
-    lines.push("| severity | rule | finding |");
-    lines.push("|---|---|---|");
-    for (const f of report.findings) {
-      lines.push(`| ${SEV_LABEL[f.severity]} | ${f.ruleId} | ${esc(f.message)} |`);
+    findingsTable(lines, report.findings);
+  }
+  if (report.readiness) {
+    lines.push("");
+    lines.push(`### 2026-07-28 readiness (a migration diff, not graded)`);
+    lines.push("");
+    if (report.readiness.findings.length) {
+      findingsTable(lines, report.readiness.findings);
+    } else {
+      lines.push("clean, nothing to migrate.");
     }
   }
   lines.push("");
@@ -74,6 +88,9 @@ export function renderWeighMarkdown(w: ServerWeighResult | SkillSetWeighResult):
       lines.push("|---|---|---|---|");
       for (const t of w.perTool.slice(0, 10)) {
         lines.push(`| \`${esc(t.name)}\` | ${t.tokens.claudeStyle} | ${t.descriptionTokens} | ${t.schemaTokens} |`);
+      }
+      if (w.framingTokens !== undefined && w.framingTokens > 0) {
+        lines.push(`| block framing (\`<functions>\` wrapper) | ${w.framingTokens} | - | - |`);
       }
     }
   } else {

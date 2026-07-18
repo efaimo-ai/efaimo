@@ -37,6 +37,17 @@ how to call tools). That framing is **per-host constant** and independent of you
 server, so efaimo excludes it: it would add the same number to every server and
 wash out of any comparison or diff.
 
+### Per-tool numbers vs the total
+
+Per-tool numbers count each tool's **bare definition line**; the Claude-style
+total counts the whole `<functions>` block, including the `<function>` tags and
+newlines around every line. That wrapper is reported as its own **block framing**
+line item, so per-tool numbers plus framing equal the Claude-style total. The
+per-tool threshold rule (E127) uses the bare line; the total rule (E128) uses the
+wrapped total. For the other two serializations no wrapper exists, and summing
+per-tool counts may differ from the total by a few tokens, because a tokenizer
+can merge characters across element boundaries when tools are concatenated.
+
 ## Skills
 
 For Agent Skills efaimo reports the three progressive-disclosure levels defined by

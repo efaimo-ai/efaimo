@@ -10,6 +10,7 @@ import type {
 import path from "node:path";
 import { countBySeverity, gradeFindings, sortFindings } from "../core/grade.js";
 import { runMcpRules, runRules } from "../core/engine.js";
+import { isReadinessRuleId } from "../rules/mcp/index.js";
 import { SKILL_RULES } from "../rules/skill/index.js";
 import { introspectServer } from "../clients/introspect.js";
 import { runProbes } from "../clients/rawprobe.js";
@@ -20,15 +21,24 @@ import type { ResolvedTarget } from "../targets/resolve.js";
 import { VERSION } from "../version.js";
 
 function buildReport(surface: Surface, target: string, findings: Finding[], notes: string[]): CheckReport {
-  const sorted = sortFindings(findings);
+  // MCP readiness findings (E101-E118) are a migration diff for a spec that is
+  // not final until 2026-07-28; they are reported separately and never graded.
+  const readinessAll: Finding[] = [];
+  const gradedAll: Finding[] = [];
+  for (const f of findings) {
+    (surface === "mcp" && isReadinessRuleId(f.ruleId) ? readinessAll : gradedAll).push(f);
+  }
+  const graded = sortFindings(gradedAll);
+  const readiness = sortFindings(readinessAll);
   return {
     tool: "efaimo",
     version: VERSION,
     surface,
     target,
-    findings: sorted,
-    counts: countBySeverity(sorted),
-    grade: gradeFindings(sorted),
+    findings: graded,
+    counts: countBySeverity(graded),
+    grade: gradeFindings(graded),
+    ...(surface === "mcp" ? { readiness: { findings: readiness, counts: countBySeverity(readiness) } } : {}),
     notes,
   };
 }

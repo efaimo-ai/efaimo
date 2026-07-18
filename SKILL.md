@@ -30,9 +30,10 @@ Run via `npx efaimo` (no install needed).
   `npx efaimo weigh --client claude-code` (also `claude-desktop`, `cursor`,
   `vscode`) sums every configured server.
 - **Audit an MCP server**
-  `npx efaimo check --mcp "npx -y <server>"` runs quality rules plus 2026-07-28
-  readiness probes and prints a letter grade. Add `--repo ./src` to also scan
-  source for deprecated primitives, `--strict` to fail on warnings.
+  `npx efaimo check --mcp "npx -y <server>"` prints a quality grade plus a
+  separate 2026-07-28 migration diff (what breaks under the stateless spec and
+  how to fix it). Add `--repo ./src` to also scan source for deprecated
+  primitives, `--strict` to fail on warnings.
 - **Lint a skill**
   `npx efaimo check --skill ./skills/` validates frontmatter, trigger quality,
   context budget, file references, and injection patterns.
@@ -44,7 +45,8 @@ Run via `npx efaimo` (no install needed).
 ## Reading the output
 
 Findings carry a stable rule id (E1xx MCP readiness, E12x-E13x MCP quality, S1xx
-skills) and a severity. The grade starts at 100 and loses points per finding. Token
+skills) and a severity. The letter grade covers quality and skill findings only;
+2026-07-28 readiness items appear separately as an ungraded migration diff. Token
 numbers are o200k estimates unless `--anthropic` is used; see the methodology doc
 for the full method.
 

@@ -13,7 +13,7 @@ import { VERSION } from "../version.js";
  * Every probe fails soft into a { skipped } marker.
  */
 
-const RC_VERSION = "2026-07-28";
+export const RC_VERSION = "2026-07-28";
 const LEGACY_VERSION = "2025-06-18";
 
 interface RpcReply {
@@ -23,7 +23,7 @@ interface RpcReply {
   procExit?: number | null;
 }
 
-function rcMeta(): Record<string, unknown> {
+export function rcMeta(): Record<string, unknown> {
   return {
     _meta: {
       "io.modelcontextprotocol/protocolVersion": RC_VERSION,
@@ -48,11 +48,18 @@ function toOutcome(reply: RpcReply, timeoutMessage: string): ProbeOutcome {
  * (the server may just be slow to start) and is reported separately as
  * inconclusive; a crash is its own signal. This keeps E105 from false-flagging a
  * healthy but slow server, the worst verdict a readiness checker can emit.
+ *
+ * Detection is by message, not by error code: the codes SDKs use here are
+ * implementation-defined (TS StreamableHTTP sends -32000 for both "Server not
+ * initialized" and "Mcp-Session-Id header is required", -32001 for "Session not
+ * found"), -32002 means Resource-not-found in the 2025 specs, and the RC
+ * reserves -32022 for UnsupportedProtocolVersion, so no code is diagnostic.
  */
 export function looksLikeInitGate(o: ProbeOutcome): boolean {
   if (o.kind !== "error") return false;
-  if (o.errorCode === -32002) return true;
-  return /not\s*initiali|require[sd]?\s+initiali|no\s+valid\s+session|session\s+id/i.test(o.errorMessage ?? "");
+  return /not\s*initiali|before\s+initiali|require[sd]?\s+initiali|no\s+valid\s+session|session[-\s]?id|session\s+(?:not\s+found|required)/i.test(
+    o.errorMessage ?? "",
+  );
 }
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -76,7 +83,7 @@ export async function runProbes(
 
 /* ------------------------------ stdio ------------------------------ */
 
-class StdioSession {
+export class StdioSession {
   private proc: ChildProcess;
   private buf = "";
   private pending = new Map<number, (r: RpcReply) => void>();
@@ -277,14 +284,14 @@ async function probeStdio(
 
 /* ------------------------------ http ------------------------------- */
 
-interface HttpReply {
+export interface HttpReply {
   status: number;
   headers: Headers;
   body?: { result?: Record<string, unknown>; error?: { code: number; message: string } };
   authHeader?: string;
 }
 
-async function postMessage(
+export async function postMessage(
   url: string,
   extraHeaders: Record<string, string> | undefined,
   msg: Record<string, unknown>,
@@ -511,6 +518,46 @@ async function probeHttp(
     }
   }
 
+  // Probe server/discover on the bare stateless path too, exactly like stdio: a
+  // 2026-07-28 server has no initialize, so waiting for the legacy branch would
+  // leave E106 (a MUST rule) unmeasured on precisely the servers it targets.
+  if (results.bareToolsList && "ok" in results.bareToolsList && results.bareToolsList.ok) {
+    try {
+      const d = await postMessage(
+        url,
+        headers,
+        { jsonrpc: "2.0", id: 7, method: "server/discover", params: rcMeta() },
+        undefined,
+        RC_VERSION,
+      );
+      if (d.body?.result) results.serverDiscover = { supported: true };
+      else if (d.body?.error && d.body.error.code === -32601) {
+        results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
+      } else if (d.body?.error) {
+        results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };
+      }
+    } catch {
+      /* leave for the legacy branch to try */
+    }
+    // Determinism (E112) on the bare path: a second bare request, like stdio.
+    const bareTools = toolOrder(bare.body && "result" in bare.body ? bare.body.result : undefined);
+    if (bareTools.length > 1) {
+      try {
+        const again = await postMessage(
+          url,
+          headers,
+          { jsonrpc: "2.0", id: 8, method: "tools/list", params: rcMeta() },
+          undefined,
+          RC_VERSION,
+        );
+        const order2 = toolOrder(again.body?.result);
+        if (order2.length) results.toolsOrderDeterministic = arraysEqual(bareTools, order2);
+      } catch {
+        /* inconclusive */
+      }
+    }
+  }
+
   if (!results.httpAuth) {
     try {
       const init = await postMessage(url, headers, {
@@ -527,20 +574,26 @@ async function probeHttp(
         const t1 = await postMessage(url, headers, { jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }, sessionId);
         let order1: string[] | undefined;
         if (t1.body?.result) {
-          results.resultTypePresent = Object.prototype.hasOwnProperty.call(t1.body.result, "resultType");
-          results.cacheFieldsPresent = hasCacheFields(t1.body.result);
+          // Never overwrite what the bare stateless path already measured: a
+          // dual-stack server legitimately answers legacy-version requests with
+          // legacy-shaped results, and clobbering the RC measurements here
+          // would fabricate readiness findings on the best-migrated servers.
+          results.resultTypePresent ??= Object.prototype.hasOwnProperty.call(t1.body.result, "resultType");
+          results.cacheFieldsPresent ??= hasCacheFields(t1.body.result);
           const tools = (t1.body.result as { tools?: { name?: string }[] }).tools ?? [];
           order1 = tools.map((x) => x?.name).filter((n): n is string => typeof n === "string");
         }
-        const d = await postMessage(url, headers, { jsonrpc: "2.0", id: 4, method: "server/discover", params: {} }, sessionId);
-        if (d.body?.result) results.serverDiscover = { supported: true };
-        else if (d.body?.error && d.body.error.code === -32601) {
-          results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
-        } else if (d.body?.error) {
-          results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };
-        } else results.serverDiscover = { skipped: "no answer to server/discover" };
+        if (results.serverDiscover === undefined) {
+          const d = await postMessage(url, headers, { jsonrpc: "2.0", id: 4, method: "server/discover", params: {} }, sessionId);
+          if (d.body?.result) results.serverDiscover = { supported: true };
+          else if (d.body?.error && d.body.error.code === -32601) {
+            results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
+          } else if (d.body?.error) {
+            results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };
+          } else results.serverDiscover = { skipped: "no answer to server/discover" };
+        }
 
-        if (order1 && order1.length > 1) {
+        if (order1 && order1.length > 1 && results.toolsOrderDeterministic === undefined) {
           const init2 = await postMessage(url, headers, {
             jsonrpc: "2.0",
             id: 5,

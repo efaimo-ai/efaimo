@@ -6,10 +6,16 @@ Severities: **error** (will bite you), **warn** (should fix), **info** (worth kn
 Grade starts at 100; each error costs 15, each warning 5, each info 1.
 `A >= 90, B >= 80, C >= 70, D >= 60, else F`.
 
-MCP checks split into **2026-07-28 readiness** (E1xx) and **quality** (E12x-E13x).
-Skill checks are S1xx. Readiness rules reference the stateless spec revision that
-finalizes 2026-07-28 (RC locked 2026-05-21); source-pattern rules are heuristics
-and say so in their detail line.
+MCP checks split into **2026-07-28 readiness** (E101-E118) and **quality**
+(E121-E130); skill checks are S1xx. **Only quality and skill findings are
+graded.** Readiness findings are reported as a separate, ungraded **migration
+diff**: the stateless revision they target is a locked Release Candidate
+(2026-05-21) that does not finalize until 2026-07-28, and not yet migrating to
+an unreleased spec is a to-do, not a defect. Readiness severities still order
+the diff by urgency, but the diff never affects the grade, the badge, or the
+exit code (including `--strict`). Once the spec ratifies, expect readiness to
+start counting in a minor release. Source-pattern rules are heuristics and say
+so in their detail line.
 
 ## MCP readiness (E101-E118)
 
@@ -32,7 +38,7 @@ and say so in their detail line.
 | E115 | info | source uses `resources/subscribe`, replaced by `subscriptions/listen` | draft changelog |
 | E116 | warn | server prints non-JSON noise on stdout (breaks stdio framing) | transport basics |
 | E117 | warn | only the deprecated HTTP+SSE transport worked; Streamable HTTP failed | draft changelog |
-| E118 | warn | `tools/list` result omits the now-required `ttlMs`/`cacheScope` cache fields (SEP-2549, CacheableResult; also required on prompts/list, resources/list, resources/read, resources/templates/list) | draft changelog |
+| E118 | warn | `tools/list` result omits the now-required `ttlMs`/`cacheScope` cache fields (SEP-2549, CacheableResult; also required on prompts/list, resources/list, resources/read, resources/templates/list, server/discover) | draft changelog |
 
 ## MCP quality (E121-E130)
 

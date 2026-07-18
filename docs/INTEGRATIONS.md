@@ -101,9 +101,10 @@ Add it to a client config (Claude Desktop, Claude Code, Cursor, ...):
 Both tools take a `path` to a SKILL.md or a folder of skills and return Markdown.
 
 efaimo holds its own server to the same bar. `efaimo check --mcp "npx -y efaimo mcp"`
-grades it a B: the tools are read-only and annotated, but a fully 2026-07-28
-(stateless) server wants the 2.x MCP SDK for `server/discover` and cache fields. That
-SDK upgrade is the roadmap item; the server is useful today on the current SDK.
+grades it a quality A with a three-item 2026-07-28 migration diff: a fully
+stateless server wants the 2.x MCP SDK for `server/discover`, cache fields, and
+`resultType`. That SDK upgrade is the roadmap item; the server is useful today on
+the current SDK.
 
 ## Programmatic use
 

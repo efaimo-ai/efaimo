@@ -1,0 +1,1 @@
+{"servers":{"broken-a":{"command":"node","args":["does-not-exist-a.mjs"]},"broken-b":{"command":"node","args":["does-not-exist-b.mjs"]}}}

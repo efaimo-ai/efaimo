@@ -34,7 +34,20 @@ const s101: SkillRule = {
       if (name.length > 64) push("error", `name is ${name.length} chars (spec max 64)`);
       const dirName = path.basename(skill.dir);
       if (name !== dirName) {
-        push("error", `name "${name}" must match its directory name "${dirName}" (agentskills.io spec)`, "rename the directory or the skill");
+        // A release tarball or default clone lands in "<name>-0.1.0" or
+        // "<name>-main"; that is packaging, not the author's naming, so it
+        // must not fail the skill (or --strict) with a spurious error.
+        const suffix = dirName.startsWith(`${name}-`) ? dirName.slice(name.length + 1) : undefined;
+        const archiveLike =
+          suffix !== undefined &&
+          /^(v?\d+(\.\d+)*([-.][0-9A-Za-z.]+)?|main|master|trunk|[0-9a-f]{7,40})$/.test(suffix);
+        push(
+          archiveLike ? "info" : "warn",
+          `name "${name}" does not match its directory name "${dirName}" (agentskills.io spec expects them to match)`,
+          archiveLike
+            ? "looks like an unpacked archive or clone directory; install the skill under a directory named after it"
+            : "rename the directory or the skill; hosts key skills by directory",
+        );
       }
     }
     const desc = skill.frontmatter.description;

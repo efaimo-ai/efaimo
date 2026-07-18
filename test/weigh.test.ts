@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { countTokens } from "../src/weigh/tokens.js";
 import { serializeClaudeStyle, serializeSingle, toolToClaudeLine } from "../src/weigh/serializers.js";
 import { diffServerWeigh } from "../src/weigh/diff.js";
-import type { ServerWeighResult, ToolDef } from "../src/core/types.js";
+import { weighServer } from "../src/weigh/weigh.js";
+import type { ServerIntrospection, ServerWeighResult, ToolDef } from "../src/core/types.js";
 
 const TOOLS: ToolDef[] = [
   { name: "add", description: "Add two numbers and return the sum.", inputSchema: { type: "object", properties: { a: { type: "number" }, b: { type: "number" } } } },
@@ -35,6 +36,21 @@ describe("serializers", () => {
   it("single serialization is a subset of the batch", () => {
     const single = serializeSingle(TOOLS[0]!);
     expect(single.claudeStyle).toBe(toolToClaudeLine(TOOLS[0]!));
+  });
+
+  it("per-tool Claude-style numbers plus block framing reconcile with the total", async () => {
+    const intro: ServerIntrospection = {
+      targetLabel: "reconcile",
+      transport: "stdio",
+      tools: TOOLS,
+      resources: [],
+      prompts: [],
+      notes: [],
+    };
+    const w = await weighServer(intro);
+    const perToolSum = w.perTool.reduce((s, t) => s + t.tokens.claudeStyle, 0);
+    expect(w.framingTokens).toBeGreaterThan(0);
+    expect(perToolSum + w.framingTokens!).toBe(w.totals.claudeStyle);
   });
 });
 

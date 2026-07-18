@@ -236,7 +236,7 @@ const e107: McpRule = {
         severity: "info",
         title: "results missing resultType",
         message: `results do not carry the resultType field required in ${RC} ("complete" | "input_required")`,
-        detail: "RC clients treat missing resultType from earlier-protocol servers as \"complete\", so this is informational until you upgrade.",
+        detail: "the RC requires resultType on every result (SEP-2322); on list results the value must be \"complete\". RC clients treat missing resultType from earlier-protocol servers as \"complete\", so this is informational until you upgrade.",
       },
     ];
   },
@@ -357,7 +357,7 @@ const e118: McpRule = {
         severity: "warn",
         title: "missing cache fields (ttlMs, cacheScope)",
         message: `tools/list result omits ttlMs and/or cacheScope, which ${RC} requires on list and resource-read results (SEP-2549, CacheableResult)`,
-        detail: "required on tools/list, prompts/list, resources/list, resources/read, resources/templates/list; cacheScope is \"public\" or \"private\"",
+        detail: "required on tools/list, prompts/list, resources/list, resources/read, resources/templates/list, and server/discover; cacheScope is \"public\" or \"private\"",
         fixHint: "return ttlMs and cacheScope on these results so clients can cache and stop polling; the 2.x SDKs add them for you",
       },
     ];
@@ -677,3 +677,8 @@ export const MCP_RULES: McpRule[] = [
   ...repoMatchRules,
   e121, e122, e123, e124, e125, e126, e127, e128, e130,
 ];
+
+/** E101-E118 are 2026-07-28 readiness rules: reported as a migration diff, not graded. */
+export function isReadinessRuleId(id: string): boolean {
+  return /^E1(0|1)\d$/.test(id);
+}

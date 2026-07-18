@@ -168,6 +168,7 @@ program
     if (!targets.length) fail("nothing to weigh: pass a target or --client <name> (see --help)");
 
     const results: WeighResult[] = [];
+    const skipped: { label: string; reason: string }[] = [];
     for (const target of targets) {
       if (target.kind === "skillset") {
         const set = findSkills(target.path);
@@ -179,12 +180,28 @@ program
         );
       } else {
         console.error(pc.dim(`connecting to ${target.label} ...`));
-        const intro = await introspectServer(target, { timeoutMs });
-        results.push(await weighServer(intro, { anthropicApiKey: anthropic.apiKey, anthropicModel: anthropic.model }));
+        try {
+          const intro = await introspectServer(target, { timeoutMs });
+          results.push(await weighServer(intro, { anthropicApiKey: anthropic.apiKey, anthropicModel: anthropic.model }));
+        } catch (e) {
+          // One broken/auth-gated server must not abort a multi-server run
+          // (--client weighs everything an editor loads; some entries need auth).
+          if (targets.length === 1) throw e;
+          const reason = (e instanceof Error ? e.message : String(e)).split("\n")[0]!.trim();
+          skipped.push({ label: target.label, reason });
+          console.error(pc.yellow(`skipped ${target.label}: ${reason}`));
+        }
       }
     }
+    if (!results.length) {
+      fail(`no server could be weighed (${skipped.length} of ${targets.length} failed; see reasons above)`);
+    }
 
-    const single = results.length === 1 ? results[0]! : undefined;
+    // "Single" means the user asked for exactly one target, not that exactly
+    // one target survived: a multi-target run with skips must not silently
+    // write/diff a baseline or emit a single-object JSON for whichever server
+    // happened to work.
+    const single = targets.length === 1 && results.length === 1 ? results[0]! : undefined;
     const budgetTotal = results.reduce(
       (s, r) => s + (r.kind === "mcp" ? r.totals.claudeStyle : r.totals.metadata + r.totals.body),
       0,
@@ -194,7 +211,7 @@ program
       fs.writeFileSync(opts.out, toJsonEnvelope("weigh", single));
       console.error(pc.dim(`baseline written: ${opts.out}`));
     } else if (opts.out) {
-      console.error(pc.yellow("--out skipped: it writes a single baseline, but multiple targets were weighed"));
+      console.error(pc.yellow("--out skipped: it writes a single baseline, but multiple targets were requested"));
     }
 
     if (opts.json) {
@@ -219,6 +236,13 @@ program
           );
         }
       }
+    }
+    if (skipped.length) {
+      console.error(
+        pc.yellow(
+          `weighed ${results.length} of ${targets.length} servers; skipped: ${skipped.map((s) => s.label).join(", ")}`,
+        ),
+      );
     }
 
     if (opts.diff) {

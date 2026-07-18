@@ -10,16 +10,19 @@
 </p>
 
 <p align="center">
-  <b>efaimo</b> is the quality linter for <b>Agent Skills</b> and <b>MCP servers</b>.<br>
-  Lint what triggers, weigh what it costs, before it reaches your context window.
+  <b>efaimo</b> audits everything your agent loads: <b>MCP servers</b> and <b>Agent Skills</b>.<br>
+  One CLI lints them, weighs their context cost, diffs servers against the 2026-07-28 spec,<br>
+  and A/B-tests whether a skill actually helps.
 </p>
 
-Agent Skills are exploding, and nobody lints them. A skill's description is how it
-triggers; its body loads into context every time it fires; and curated skills still
-lower task completion a fraction of the time ([SkillsBench](https://www.skillsbench.ai)
-measured 16 of 84 doing exactly that). The most popular skill installer ships no
-quality gate at all. efaimo is that gate. It also weighs the token cost and audits
-the 2026-07-28 readiness of your MCP servers, the more mature half of the tool.
+Everything you plug into an agent spends two budgets before any work happens:
+context-window tokens, and the trigger quality that decides whether the right tool
+fires at all. Good tools exist for single slices of that problem; efaimo's job is
+the whole audit in one command, for both halves of what an agent loads. Lint a
+skill, weigh a server's tool definitions, get a migration diff for the 2026-07-28
+stateless MCP spec, and measure whether a skill actually improves task completion
+([SkillsBench](https://www.skillsbench.ai) found 16 of 84 curated skills making
+agents worse; linting alone cannot catch that).
 
 ## Agent Skills
 
@@ -38,7 +41,8 @@ grade C (71)   1 error  2 warnings  4 info
   ! S104  instructions are ~18.4k tokens (spec recommends staying under 5k)
           fix: move detail into references/ files loaded on demand
   ! S104  SKILL.md is 570 lines (spec recommends under 500)
-  i S104  metadata level is ~294 tokens; the spec targets ~100 (loads every session)
+  i S104  metadata level is ~294 tokens; the spec targets ~100 and this loads at
+          startup for every installed skill
 ```
 
 *(That is Anthropic's own `claude-api` skill.)* efaimo checks frontmatter and
@@ -46,12 +50,13 @@ trigger quality, collisions across an installed set, the context budget (metadat
 loaded every session, body loaded on trigger), reference integrity, and injection
 hygiene. Run it on a folder and every skill gets its own grade, not one aggregate.
 
-**We graded the 36 most popular public Agent Skills.** 92% score an A, but even a
-curated set has real issues: the 8% that miss an A (including Anthropic's own
-`claude-api`, a C) carry an over-limit description or bloated instructions, and the
-median skill's instructions run ~1,700 tokens loaded on every trigger. Full report
-and method: [the Skills Quality Index](./research/skills-index/REPORT.md). Reproduce
-any row with one command.
+**We graded 36 public Agent Skills**: every skill in `anthropics/skills`,
+`anthropics/claude-cookbooks`, and `obra/superpowers`, at pinned commits. 97%
+score an A, but even this curated set has real issues: Anthropic's own
+`claude-api` scores a C with an over-limit description and ~18k-token
+instructions, and the median skill's instructions run ~1,700 tokens loaded on
+every trigger. Full report, the corpus manifest, and the two commands that
+reproduce it: [the Skills Quality Index](./research/skills-index/REPORT.md).
 
 ### Does the skill actually help? (experimental)
 
@@ -100,7 +105,7 @@ and [examples/scenario.crm.yaml](./examples/scenario.crm.yaml).
 
 ```bash
 npx efaimo weigh "npx -y my-mcp-server"      # what does it cost my context window?
-npx efaimo check --mcp "npx -y my-server"    # quality + 2026-07-28 readiness
+npx efaimo check --mcp "npx -y my-server"    # quality grade + 2026-07-28 migration diff
 ```
 
 `weigh` reports the token cost of tool definitions in three real serializations,
@@ -110,11 +115,16 @@ per tool, with an optional `--anthropic` exact Claude count.
   <img src="assets/demo.png" alt="efaimo weigh example output" width="720">
 </p>
 
-`check --mcp` connects live and, rather than a yes/no verdict, gives you a
-**migration diff** for the 2026-07-28 stateless spec (which removes `initialize`,
-sessions, Sampling, Roots, and Logging, and requires `server/discover`,
-`resultType`, and cache fields): exactly what will break and how to fix it, each
-rule naming the SEP it came from. Full list: [docs/RULES.md](./docs/RULES.md).
+`check --mcp` connects live (it speaks both the legacy handshake and the new
+stateless protocol, so a 2026-07-28 server audits fine) and reports two things,
+separately. First, a **quality grade** for what models actually experience:
+descriptions, schemas, annotations, tool count, token cost. Second, an ungraded
+**migration diff** for the 2026-07-28 stateless spec (which removes
+`initialize`, sessions, Sampling, Roots, and Logging, and requires
+`server/discover`, `resultType`, and cache fields): exactly what will break and
+how to fix it, each rule naming the SEP it came from. Readiness never drags the
+grade; not having migrated to a spec that is not final until 2026-07-28 is a
+to-do list, not a defect. Full list: [docs/RULES.md](./docs/RULES.md).
 
 ## From an agent
 
@@ -141,19 +151,22 @@ your context window.
 
 ## How it compares
 
-Focused tools already own pieces of this space; efaimo is the one that covers Agent
-Skills and frames MCP readiness as an actionable diff. As of mid-2026:
+Focused tools already own single slices of this space, and some are very good.
+efaimo is the one tool that covers the whole audit surface. As of mid-2026:
 
-| | efaimo | mcp-xray | mcp-spec-check |
-|---|---|---|---|
-| Agent Skills linting | yes | no | no |
-| Skill A/B outcome test | yes (experimental) | no | no |
-| MCP tool-definition cost | yes (3 serializations, `--anthropic` exact) | yes (graded) | no |
-| 2026-07-28 readiness | as a migration diff: what breaks and how to fix | no | as a yes/no verdict |
-| CI budget gate + badge | yes | no | no |
+| | efaimo | [skill-validator](https://github.com/agent-ecosystem/skill-validator) | [upskill](https://github.com/huggingface/upskill) | [mcp-spec-check](https://github.com/Roee-Tsur/mcp-spec-check) | [conformance](https://github.com/modelcontextprotocol/conformance) (official) |
+|---|---|---|---|---|---|
+| Agent Skills linting | yes | yes | no | no | no |
+| Skill token cost | yes (3-level split) | yes | no | no | no |
+| Skill outcome testing | with/without A/B trials (experimental) | static LLM scoring | yes (generate + eval, code agents) | no | no |
+| MCP tool-definition cost | yes (3 serializations, `--anthropic` exact) | no | no | no | no |
+| MCP quality rules | yes | no | no | no | no |
+| 2026-07-28 readiness | migration diff: what breaks and how to fix | no | no | yes/no verdict | official test suite |
+| CI budget gate + badge | yes | no | no | no | no |
 
-efaimo complements the security scanners (Snyk agent-scan) and the skills installer
-(`npx skills`) rather than replacing them.
+efaimo runs the official conformance suite for you (`check --conformance` on
+http targets) and complements security scanners such as Snyk agent-scan and the
+skills installer (`npx skills`) rather than replacing them.
 
 ## Install
 
@@ -190,12 +203,18 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 | **E101 to E118** | MCP 2026-07-28 readiness: deprecated primitives, statelessness, `server/discover`, `resultType`, cache fields, transport |
 | **E121 to E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
 
-Every finding carries a stable id you can suppress or link. See [docs/RULES.md](./docs/RULES.md).
+Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
+findings (E101-E118) are reported as an ungraded migration diff until the spec
+ratifies. Every finding carries a stable id you can suppress or link. See
+[docs/RULES.md](./docs/RULES.md).
 
 ## Roadmap
 
-- Harden `efaimo test` with judge calibration and variance reporting, so this
-  experimental harness earns the confidence to become the tool's differentiator.
+- Harden `efaimo test`: a separately chosen judge model, confidence intervals on
+  the delta, multi-turn tool-use trials, and judge calibration, so the
+  experimental harness earns unqualified trust.
+- Track the 2026-07-28 spec to ratification, then start grading readiness (today
+  it is an ungraded migration diff on purpose).
 - A public, continuously updated Agent Skills Quality Index over a broad corpus.
 
 ## Stability

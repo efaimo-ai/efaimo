@@ -30,13 +30,16 @@ describe("repo scan", () => {
     expect(scan.sdk?.some((s) => s.package === "@modelcontextprotocol/sdk" && s.generation === "legacy")).toBe(true);
   });
 
-  it("check --repo-only surfaces E101/E102/E103/E104 findings", () => {
+  it("check --repo-only surfaces E101/E102/E103/E104 in the readiness diff", () => {
     const report = checkMcpRepoOnly(REPO, "fixture-repo");
-    const ids = new Set(report.findings.map((f) => f.ruleId));
+    // Readiness findings are the ungraded migration diff, not graded findings.
+    const ids = new Set(report.readiness!.findings.map((f) => f.ruleId));
     expect(ids.has("E101")).toBe(true);
     expect(ids.has("E102")).toBe(true);
     expect(ids.has("E103")).toBe(true);
     expect(ids.has("E104")).toBe(true);
+    expect(report.findings.length).toBe(0);
+    expect(report.grade.letter).toBe("A");
   });
 
   it("does not treat sibling packages (mcp-agent, mcpengine) as the mcp SDK", () => {

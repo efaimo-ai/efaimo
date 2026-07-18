@@ -5,6 +5,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import type { ServerIntrospection, ToolDef, ResourceDef, PromptDef } from "../core/types.js";
 import type { ResolvedTarget } from "../targets/resolve.js";
+import { introspectStateless } from "./stateless.js";
 import { minimalChildEnv } from "../util/childEnv.js";
 import { truncate, withTimeout } from "../util/misc.js";
 import { VERSION } from "../version.js";
@@ -40,6 +41,10 @@ export async function introspectServer(
       await withTimeout(client.connect(stdio), timeoutMs, "connect (stdio)");
     } catch (e) {
       await safeClose(client, stdio);
+      // A 2026-07-28 stateless server has no initialize, so the SDK handshake
+      // fails by design; try bare stateless requests before giving up.
+      const rc = await introspectStateless(target, { timeoutMs });
+      if (rc) return rc;
       throw connectError(e, target.label, stderrTail);
     }
     // The child is spawned by connect(); its stderr stream only exists now.
@@ -65,6 +70,10 @@ export async function introspectServer(
         await withTimeout(sseClient.connect(sse), timeoutMs, "connect (legacy sse)");
       } catch {
         await safeClose(sseClient, sse);
+        // Neither SDK transport connected; a stateless RC server rejects the
+        // initialize both send. Try bare stateless requests before giving up.
+        const rc = await introspectStateless(target, { timeoutMs });
+        if (rc) return rc;
         throw connectError(streamableErr, target.label, "");
       }
       notes.push("connected via legacy HTTP+SSE transport (deprecated; Streamable HTTP failed)");

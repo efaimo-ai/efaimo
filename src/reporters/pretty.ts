@@ -34,27 +34,44 @@ function n(x: number): string {
   return x.toLocaleString("en-US");
 }
 
+function renderFinding(lines: string[], f: Finding): void {
+  lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${f.message}`);
+  if (f.detail) {
+    for (const d of f.detail.split("\n")) lines.push(paint(pc.dim, `          ${d}`));
+  }
+  if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${f.fixHint}`));
+}
+
 export function renderCheckPretty(report: CheckReport): string {
   const lines: string[] = [];
   lines.push(paint(pc.dim, `efaimo v${VERSION}`));
   lines.push(`check ${report.surface}  ${paint(pc.bold, report.target)}`);
   const g = report.grade;
+  const qualityLabel = report.readiness ? "quality: " : "";
   lines.push(
-    `grade ${gradeColor(g.letter, `${g.letter} (${g.score})`)}   ` +
+    `grade ${gradeColor(g.letter, `${g.letter} (${g.score})`)}   ${qualityLabel}` +
       `${paint(pc.red, String(report.counts.error))} error${report.counts.error === 1 ? "" : "s"}  ` +
       `${paint(pc.yellow, String(report.counts.warn))} warning${report.counts.warn === 1 ? "" : "s"}  ` +
       `${paint(pc.cyan, String(report.counts.info))} info`,
   );
   lines.push("");
   if (!report.findings.length) {
-    lines.push(paint(pc.green, "  no findings. clean."));
+    lines.push(paint(pc.green, report.readiness ? "  no quality findings. clean." : "  no findings. clean."));
   }
-  for (const f of report.findings) {
-    lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${f.message}`);
-    if (f.detail) {
-      for (const d of f.detail.split("\n")) lines.push(paint(pc.dim, `          ${d}`));
+  for (const f of report.findings) renderFinding(lines, f);
+  if (report.readiness) {
+    const r = report.readiness;
+    lines.push("");
+    if (r.findings.length) {
+      lines.push(
+        paint(pc.bold, `2026-07-28 readiness`) +
+          `  ${r.findings.length} item${r.findings.length === 1 ? "" : "s"} to migrate ` +
+          paint(pc.dim, "(a migration diff, not graded: the spec finalizes 2026-07-28)"),
+      );
+      for (const f of r.findings) renderFinding(lines, f);
+    } else {
+      lines.push(paint(pc.bold, `2026-07-28 readiness`) + paint(pc.green, "  clean, nothing to migrate"));
     }
-    if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${f.fixHint}`));
   }
   lines.push("");
   for (const note of report.notes) lines.push(paint(pc.dim, `note: ${note}`));
@@ -172,6 +189,11 @@ export function renderServerWeighPretty(w: ServerWeighResult): string {
       );
     }
     if (w.perTool.length > 8) lines.push(paint(pc.dim, `      (+${w.perTool.length - 8} more)`));
+    if (w.framingTokens !== undefined && w.framingTokens > 0) {
+      lines.push(
+        paint(pc.dim, `      block framing ${" ".repeat(15)}${n(w.framingTokens).padStart(7)}   (<functions> wrapper; per-tool lines + this = total)`),
+      );
+    }
   }
   lines.push("");
   for (const note of w.notes) lines.push(paint(pc.dim, `note: ${note}`));

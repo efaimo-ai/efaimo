@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Skills Quality Index: grade a corpus of public Agent Skills with efaimo and
-// emit a markdown report. Usage: node scripts/skills-index.mjs <corpus-dir> [out.md]
+// emit a markdown report. Fetch a reproducible corpus first with
+// scripts/skills-corpus.mjs (it writes <corpus-dir>/manifest.json).
+// Usage: node scripts/skills-index.mjs <corpus-dir> [out.md]
 import fs from "node:fs";
 import path from "node:path";
 import { checkSkillSet } from "../dist/index.js";
@@ -10,6 +12,13 @@ const out = process.argv[3] ?? "research/skills-index/REPORT.md";
 if (!corpus) {
   console.error("usage: node scripts/skills-index.mjs <corpus-dir> [out.md]");
   process.exit(2);
+}
+
+let manifest;
+try {
+  manifest = JSON.parse(fs.readFileSync(path.join(corpus, "manifest.json"), "utf8"));
+} catch {
+  manifest = undefined;
 }
 
 function skillDirs(root) {
@@ -75,6 +84,18 @@ L.push("# The Agent Skills Quality Index");
 L.push("");
 L.push(`Every public Agent Skill in the corpus, graded by [efaimo](https://github.com/efaimo-ai/efaimo) \`check --skill\`. Corpus: ${n} skills.`);
 L.push("");
+if (manifest?.sources?.length) {
+  L.push("## Corpus");
+  L.push("");
+  L.push("Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node scripts/skills-corpus.mjs <dir> research/skills-index/manifest.json` fetches the identical corpus (the manifest pins the commits below), then `node scripts/skills-index.mjs <dir>` regenerates this report:");
+  L.push("");
+  L.push("| source | repository | commit |");
+  L.push("|---|---|---|");
+  for (const s of manifest.sources) {
+    L.push(`| ${s.dir} | ${s.repo} | \`${s.commit.slice(0, 12)}\` |`);
+  }
+  L.push("");
+}
 L.push("## Headline");
 L.push("");
 L.push(`- **${pct(dist.A)} score an A**, but **${pct(withErrors)} carry at least one error-level finding**.`);
@@ -99,7 +120,21 @@ L.push("| skill | source | grade | errors | warnings | info |");
 L.push("|---|---|---|---|---|---|");
 for (const r of worst) L.push(`| \`${r.name}\` | ${r.source} | ${r.grade.letter} (${r.grade.score}) | ${r.counts.error} | ${r.counts.warn} | ${r.counts.info} |`);
 L.push("");
-L.push(`<sub>Reproduce: \`npx efaimo check --skill <skill>\`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>`);
+L.push("## Full corpus");
+L.push("");
+L.push("<details><summary>Every graded skill</summary>");
+L.push("");
+L.push("| skill | source | grade |");
+L.push("|---|---|---|");
+for (const r of [...ok].sort((a, b) => a.name.localeCompare(b.name))) {
+  L.push(`| \`${r.name}\` | ${r.source} | ${r.grade.letter} (${r.grade.score}) |`);
+}
+const failedRows = rows.filter((r) => r.error);
+for (const r of failedRows) L.push(`| \`${r.name}\` | ${r.source} | (parse failed) |`);
+L.push("");
+L.push("</details>");
+L.push("");
+L.push(`<sub>Reproduce a row: \`npx efaimo check --skill <skill-dir>\`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>`);
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, L.join("\n") + "\n");

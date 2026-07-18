@@ -38,7 +38,7 @@ describe("skill parsing", () => {
     expect(ids.has("S105")).toBe(true); // injection (now info)
     expect(ids.has("S106")).toBe(true); // missing markdown-link ref (error)
     expect(report.counts.error).toBeGreaterThan(0);
-    expect(report.grade.letter).toBe("F");
+    expect(["D", "F"]).toContain(report.grade.letter);
   });
 
   it("gives the good skill a clean bill of health", async () => {
@@ -61,12 +61,30 @@ describe("skill parsing", () => {
     const good = res.perSkill.find((s) => s.name === "good-skill")!;
     const bad = res.perSkill.find((s) => s.name === "totally-different-name" || s.dir.endsWith("bad-skill"))!;
     expect(["A", "B"]).toContain(good.report.grade.letter);
-    expect(bad.report.grade.letter).toBe("F");
+    expect(["D", "F"]).toContain(bad.report.grade.letter);
   });
 
   it("detects a cross-tool-steering instruction (regression: adjective between verb and 'tools')", () => {
     const s = parseSkillFile(path.join(SKILLS, "bad-skill", "SKILL.md"));
     expect(s.body).toMatch(/before using any other tools/i);
+  });
+
+  it("treats archive-style dir naming (name-0.1.0) as info, genuine mismatch as warn, never error", async () => {
+    const NAMING = path.join(here, "fixtures", "skills-naming");
+    const res = await checkSkillSet(NAMING, "naming");
+    const tarball = res.perSkill.find((s) => s.dir.endsWith("demo-0.1.0"))!;
+    const renamed = res.perSkill.find((s) => s.dir.endsWith("renamed-dir"))!;
+    const tarballMismatch = tarball.report.findings.filter(
+      (f) => f.ruleId === "S101" && /directory name/.test(f.message),
+    );
+    const renamedMismatch = renamed.report.findings.filter(
+      (f) => f.ruleId === "S101" && /directory name/.test(f.message),
+    );
+    expect(tarballMismatch.map((f) => f.severity)).toEqual(["info"]);
+    expect(renamedMismatch.map((f) => f.severity)).toEqual(["warn"]);
+    expect(tarball.report.counts.error).toBe(0);
+    expect(renamed.report.counts.error).toBe(0);
+    expect(tarball.report.grade.letter).toBe("A");
   });
 
   it("weighs skills with the three-level split", async () => {

@@ -14,15 +14,22 @@ First release.
 
 - `efaimo weigh`: context-window cost of MCP tool definitions (stdio, remote, or a
   whole client config) and of Agent Skills, in three serializations, with an
-  optional `--anthropic` exact Claude count. `--out`/`--diff`/`--max-tokens`/
-  `--allow-increase` for CI budget gates, `--badge` for a shields endpoint.
-- `efaimo check --mcp`: 2026-07-28 stateless-spec readiness probes (E101-E118) plus
-  quality rules (E121-E130), with a letter grade. Optional `--repo` source scan and
+  optional `--anthropic` exact Claude count. Per-tool numbers plus an explicit
+  block-framing line reconcile exactly with the total. In a multi-server run a
+  broken or auth-gated server is skipped with a reason, not fatal.
+  `--out`/`--diff`/`--max-tokens`/`--allow-increase` for CI budget gates,
+  `--badge` for a shields endpoint.
+- `efaimo check --mcp`: a quality grade (E121-E130: descriptions, schemas,
+  annotations, cost) plus a separate, ungraded 2026-07-28 migration diff
+  (E101-E118: what the stateless spec breaks and how to fix it, each item naming
+  its SEP). Speaks both the legacy handshake and bare stateless requests, so
+  2026-07-28 servers audit fine. Optional `--repo` source scan and
   `--conformance` passthrough to the official suite.
 - `efaimo check --skill`: Agent Skills linter against the agentskills.io spec
   (S101-S106): frontmatter and trigger quality, trigger collisions, context budget,
   reference integrity, injection heuristics. Per-skill grading over a directory, and
-  a Skills Quality Index script (`scripts/skills-index.mjs`).
+  a reproducible Skills Quality Index (`scripts/skills-corpus.mjs` pins the corpus
+  to exact commits; `scripts/skills-index.mjs` grades it).
 - `efaimo test` (experimental): an A/B outcome harness that measures whether a skill
   actually improves task completion. Dry-run by default (validates the scenario, no
   API calls); `--live` runs against the Anthropic or OpenAI API, and it fails clearly

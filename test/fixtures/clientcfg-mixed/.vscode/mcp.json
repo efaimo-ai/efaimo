@@ -1,0 +1,1 @@
+{"servers":{"good":{"command":"node","args":["../mcp-server/server.mjs"]},"broken":{"command":"node","args":["does-not-exist-xyz.mjs"]}}}

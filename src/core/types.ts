@@ -133,6 +133,13 @@ export interface ServerWeighResult {
   promptCount: number;
   perTool: ToolWeigh[];
   totals: SerializedTokens;
+  /**
+   * Claude-style block framing: totals.claudeStyle minus the sum of per-tool
+   * lines, i.e. the <functions>/<function> wrapper the per-tool numbers
+   * exclude. perTool claudeStyle + this = totals.claudeStyle. Optional so
+   * pre-0.1.0 --diff baselines still parse.
+   */
+  framingTokens?: number;
   instructionsTokens: number;
   /** Exact count via Anthropic count_tokens API, when a key was provided. */
   anthropicExactTotal?: number;
@@ -188,9 +195,16 @@ export interface CheckReport {
   version: string;
   surface: Surface;
   target: string;
+  /** Graded findings: quality rules (and every skill rule). */
   findings: Finding[];
   counts: { error: number; warn: number; info: number };
   grade: GradeInfo;
+  /**
+   * MCP only: 2026-07-28 readiness findings (E101-E118), reported as an
+   * ungraded migration diff. The target spec is not final until 2026-07-28,
+   * so unreadiness is a to-do list, not a quality defect.
+   */
+  readiness?: { findings: Finding[]; counts: { error: number; warn: number; info: number } };
   notes: string[];
 }
 
