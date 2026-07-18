@@ -44,7 +44,8 @@
   <text x="824" y="180" class="m" font-size="13" fill="#525a67">200k window</text>
   <rect x="824" y="210" width="212" height="12" rx="6" fill="#191D26"/>
   <rect x="824" y="210" width="18" height="12" rx="6" fill="#57E7D6"/>
-  <text x="824" y="252" class="m" font-size="13" fill="#525a67">tool definitions: ~0.6% before any work</text>
+  <text x="824" y="246" class="m" font-size="13" fill="#525a67">tool definitions: ~0.6%</text>
+  <text x="824" y="266" class="m" font-size="13" fill="#525a67">before any work</text>
 
   <!-- caption -->
   <text x="560" y="352" text-anchor="middle" class="s" font-size="15.5" fill="#79828F">efaimo weighs the cost, checks the quality, and tests the effect of everything your agent loads,</text>

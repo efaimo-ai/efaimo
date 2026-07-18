@@ -46,5 +46,6 @@ guessing.
 
 ## Commits and PRs
 
-Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`). CI runs typecheck,
-build, tests, dogfood, and a live smoke on Ubuntu and Windows across Node 22/24, green before review.
+Write clear, imperative commit messages scoped to one change; explain the why in
+the body when it is not obvious. CI runs typecheck, build, tests, dogfood, and a
+live smoke on Ubuntu and Windows across Node 22/24, green before review.
