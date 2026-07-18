@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="efaimo. The linter for Agent Skills and MCP servers." width="820">
+  <img src="assets/banner.png" alt="efaimo. The audit CLI for Agent Skills and MCP servers." width="820">
 </p>
 
 <p align="center">
@@ -126,6 +126,27 @@ how to fix it, each rule naming the SEP it came from. Readiness never drags the
 grade; not having migrated to a spec that is not final until 2026-07-28 is a
 to-do list, not a defect. Full list: [docs/RULES.md](./docs/RULES.md).
 
+```text
+check mcp  npx -y @modelcontextprotocol/server-everything
+grade A (95)   quality: 0 errors  1 warning  0 info
+
+  ! E122  tool "echo": description misses 3/4 quality axes (length 40..600;
+          says when to use it; mentions the result)
+
+2026-07-28 readiness  4 items to migrate (a migration diff, not graded: the
+spec finalizes 2026-07-28)
+  ! E104  server declares the logging capability; MCP Logging is deprecated in
+          2026-07-28 (SEP-2577) and logging/setLevel is removed
+  ! E106  server/discover is not implemented (-32601 Method not found)
+  ! E118  tools/list result omits ttlMs and/or cacheScope, which 2026-07-28
+          requires on list and resource-read results (SEP-2549, CacheableResult)
+  i E107  results do not carry the resultType field required in 2026-07-28
+          ("complete" | "input_required")
+```
+
+*(That is the official reference server: solid quality, four things to migrate
+before the 28th.)*
+
 ## From an agent
 
 `efaimo mcp` runs efaimo as a small, read-only MCP server, so an agent can lint or
@@ -146,7 +167,7 @@ your host actually serializes it, and grades the quality, before any of it reach
 your context window.
 
 <p align="center">
-  <img src="assets/architecture.png" alt="efaimo weighs and checks what your agent loads" width="880">
+  <img src="assets/architecture.png" alt="efaimo weighs, checks, and tests what your agent loads" width="880">
 </p>
 
 ## How it compares
