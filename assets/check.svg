@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620" role="img" aria-label="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server">
+  <style>
+    .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 20px; }
+  </style>
+  <rect x="2" y="2" width="976" height="616" rx="12" fill="#0C0E13" stroke="#191D26" stroke-width="1.5"/>
+  <path d="M2 46 h976" stroke="#191D26" stroke-width="1.5"/>
+  <circle cx="30" cy="24" r="6" fill="#E8776A"/>
+  <circle cx="50" cy="24" r="6" fill="#E0C879"/>
+  <circle cx="70" cy="24" r="6" fill="#57E7D6"/>
+  <text x="490" y="30" text-anchor="middle" class="m" font-size="15" fill="#79828F">efaimo · check</text>
+
+  <text class="m" xml:space="preserve" x="34" y="92" fill="#AEB6C2"><tspan fill="#12b39f">$ </tspan><tspan fill="#AEB6C2">npx </tspan><tspan fill="#57E7D6">efaimo </tspan><tspan fill="#E9EDF3">check --mcp </tspan><tspan fill="#79828F">"npx -y @modelcontextprotocol/server-everything"</tspan></text>
+
+  <text class="m" xml:space="preserve" x="34" y="150" fill="#AEB6C2"><tspan fill="#79828F">check mcp  </tspan>npx -y @modelcontextprotocol/server-everything</text>
+  <text class="m" xml:space="preserve" x="34" y="179" fill="#AEB6C2">grade <tspan fill="#3FB950">A (95)</tspan><tspan fill="#79828F">   quality: </tspan><tspan fill="#E8776A">0</tspan><tspan fill="#79828F"> errors  </tspan><tspan fill="#E0C879">1</tspan><tspan fill="#79828F"> warning  </tspan><tspan fill="#57E7D6">0</tspan><tspan fill="#79828F"> info</tspan></text>
+
+  <text class="m" xml:space="preserve" x="34" y="237" fill="#AEB6C2"><tspan fill="#E0C879">  ! </tspan><tspan fill="#E9EDF3">E122</tspan>  tool "echo": description misses 3/4 quality axes (length 40..600;</text>
+  <text class="m" xml:space="preserve" x="34" y="266" fill="#AEB6C2">          says when to use it; mentions the result)</text>
+
+  <text class="m" xml:space="preserve" x="34" y="324" fill="#79828F"><tspan fill="#E9EDF3">2026-07-28 readiness</tspan>  4 items to migrate (a migration diff, not graded: the</text>
+  <text class="m" xml:space="preserve" x="34" y="353" fill="#79828F">spec finalizes 2026-07-28)</text>
+  <text class="m" xml:space="preserve" x="34" y="382" fill="#AEB6C2"><tspan fill="#E0C879">  ! </tspan><tspan fill="#E9EDF3">E104</tspan>  server declares the logging capability; MCP Logging is deprecated in</text>
+  <text class="m" xml:space="preserve" x="34" y="411" fill="#AEB6C2">          2026-07-28 (SEP-2577) and logging/setLevel is removed</text>
+  <text class="m" xml:space="preserve" x="34" y="440" fill="#AEB6C2"><tspan fill="#E0C879">  ! </tspan><tspan fill="#E9EDF3">E106</tspan>  server/discover is not implemented (-32601 Method not found)</text>
+  <text class="m" xml:space="preserve" x="34" y="469" fill="#AEB6C2"><tspan fill="#E0C879">  ! </tspan><tspan fill="#E9EDF3">E118</tspan>  tools/list result omits ttlMs and/or cacheScope, which 2026-07-28</text>
+  <text class="m" xml:space="preserve" x="34" y="498" fill="#AEB6C2">          requires on list and resource-read results (SEP-2549, CacheableResult)</text>
+  <text class="m" xml:space="preserve" x="34" y="527" fill="#AEB6C2"><tspan fill="#57E7D6">  i </tspan><tspan fill="#E9EDF3">E107</tspan>  results do not carry the resultType field required in 2026-07-28</text>
+  <text class="m" xml:space="preserve" x="34" y="556" fill="#AEB6C2">          ("complete" | "input_required")</text>
+
+  <rect x="34" y="578" width="11" height="20" fill="#57E7D6" opacity="0.9"/>
+</svg>

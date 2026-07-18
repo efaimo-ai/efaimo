@@ -75,8 +75,16 @@ Works with Claude (`ANTHROPIC_API_KEY`) or GPT (`OPENAI_API_KEY`) models; the
 provider is picked from the model name. Put the key in your shell or a local
 `.env` file (copy `.env.example`); a real shell variable always wins.
 
-Two real runs (claude-sonnet-5, 8 trials each) show why this matters. First, a
-generic csv-cleanup skill that a capable model does not need:
+Two real runs (claude-sonnet-5, 8 trials each) show why this matters: a generic
+csv-cleanup skill that a capable model does not need, and a skill that encodes a
+convention the model cannot guess.
+
+<p align="center">
+  <img src="assets/test-ab.png" alt="efaimo test A/B results: csv-cleanup measures +0 points (no measurable effect) while contoso-crm-import measures +100 points (helps); both skills lint clean at grade A" width="880">
+</p>
+
+<details>
+<summary>The two runs as copyable text</summary>
 
 ```text
 test  csv-cleanup helps on a messy CSV
@@ -85,8 +93,6 @@ test  csv-cleanup helps on a messy CSV
   delta          +0 points   no measurable effect
 ```
 
-Then a skill that encodes a convention the model cannot guess:
-
 ```text
 test  contoso-crm-import helps on an unknowable format
   with skill     8/8 pass  (100%)
@@ -94,12 +100,14 @@ test  contoso-crm-import helps on an unknowable format
   delta          +100 points   helps
 ```
 
-Both skills lint clean; their value is opposite. The first is pure context
-overhead, the second earns its tokens, and linting cannot tell them apart. `efaimo
-test` can. Experimental and probabilistic: raise the trial count for confidence,
-and treat small deltas as noise. It is opt-in because a live run spends tokens on
-your key. See [examples/scenario.example.yaml](./examples/scenario.example.yaml)
-and [examples/scenario.crm.yaml](./examples/scenario.crm.yaml).
+</details>
+
+The first is pure context overhead, the second earns its tokens, and only the
+trial data tells them apart. Experimental and probabilistic: raise the trial
+count for confidence, and treat small deltas as noise. It is opt-in because a
+live run spends tokens on your key. See
+[examples/scenario.example.yaml](./examples/scenario.example.yaml) and
+[examples/scenario.crm.yaml](./examples/scenario.crm.yaml).
 
 ## MCP servers
 
@@ -126,6 +134,16 @@ how to fix it, each rule naming the SEP it came from. Readiness never drags the
 grade; not having migrated to a spec that is not final until 2026-07-28 is a
 to-do list, not a defect. Full list: [docs/RULES.md](./docs/RULES.md).
 
+<p align="center">
+  <img src="assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
+</p>
+
+*(That is the official reference server: solid quality, four things to migrate
+before the 28th.)*
+
+<details>
+<summary>The same output as copyable text</summary>
+
 ```text
 check mcp  npx -y @modelcontextprotocol/server-everything
 grade A (95)   quality: 0 errors  1 warning  0 info
@@ -144,8 +162,7 @@ spec finalizes 2026-07-28)
           ("complete" | "input_required")
 ```
 
-*(That is the official reference server: solid quality, four things to migrate
-before the 28th.)*
+</details>
 
 ## From an agent
 
@@ -212,7 +229,11 @@ npx efaimo weigh "npx -y my-server" --out base.json          # record a baseline
 npx efaimo weigh "npx -y my-server" --diff base.json --allow-increase 10
 ```
 
-`--badge badge.svg` writes an SVG plus a shields.io endpoint JSON for your README.
+`--badge badge.svg` writes an SVG plus a shields.io endpoint JSON for your
+README. These two are real efaimo output for the reference server:
+
+<img src="assets/badge-weigh.svg" alt="context cost: 1120 tok (o200k)"> <img src="assets/badge-grade.svg" alt="efaimo: A (95)">
+
 More recipes (pre-commit, GitLab, editor audit, programmatic use):
 [docs/INTEGRATIONS.md](./docs/INTEGRATIONS.md).
 
