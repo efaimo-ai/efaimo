@@ -1,4 +1,5 @@
 name: "efaimo"
+author: "efaimo ai"
 description: "Audit MCP servers and Agent Skills for quality and context-window cost"
 branding:
   icon: "activity"

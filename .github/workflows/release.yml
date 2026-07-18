@@ -8,7 +8,9 @@ name: release
 # check, which doubles as an auth smoke test without republishing.
 on:
   push:
-    tags: ["v*"]
+    # Semver tags only. The docs tell action users to reference the moving major
+    # tag (@v0), and that tag must be able to move without starting a publish.
+    tags: ["v*.*.*"]
   workflow_dispatch:
 
 jobs:
