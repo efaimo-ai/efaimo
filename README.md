@@ -21,8 +21,8 @@ fires at all. Good tools exist for single slices of that problem; efaimo's job i
 the whole audit in one command, for both halves of what an agent loads. Lint a
 skill, weigh a server's tool definitions, get a migration diff for the 2026-07-28
 stateless MCP spec, and measure whether a skill actually improves task completion
-([SkillsBench](https://www.skillsbench.ai) found 16 of 84 curated skills making
-agents worse; linting alone cannot catch that).
+([SkillsBench](https://www.skillsbench.ai) found curated skills made agents
+worse on 16 of 84 tasks; linting alone cannot catch that).
 
 ## Agent Skills
 

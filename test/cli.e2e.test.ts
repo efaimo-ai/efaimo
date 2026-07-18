@@ -65,4 +65,37 @@ describe.skipIf(!built)("cli e2e (built dist)", () => {
     expect(r.code).toBe(2);
     expect(r.err).toMatch(/no server could be weighed/);
   });
+
+  // `efaimo weigh > report.txt` should produce a readable file, not escape codes.
+  // spawnSync gives the child a pipe, so stdout.isTTY is undefined here.
+  it("writes no ANSI escapes when stdout is not a terminal", () => {
+    const r = spawnSync(process.execPath, [CLI, "weigh", path.join(SKILLS, "good-skill")], {
+      encoding: "utf8",
+      env: { ...process.env, FORCE_COLOR: undefined, NO_COLOR: undefined },
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout ?? "").not.toMatch(/\u001b\[/);
+  });
+
+  it("still colours a pipe when FORCE_COLOR asks for it", () => {
+    const r = spawnSync(process.execPath, [CLI, "weigh", path.join(SKILLS, "good-skill")], {
+      encoding: "utf8",
+      env: { ...process.env, FORCE_COLOR: "1", NO_COLOR: undefined },
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout ?? "").toMatch(/\u001b\[/);
+  });
+
+  it("names the window it measured against, and honours --window", () => {
+    const dflt = run(["weigh", "--stdio", "node " + path.join(here, "fixtures", "mcp-server", "server.mjs")]);
+    const narrow = run(["weigh", "--stdio", "node " + path.join(here, "fixtures", "mcp-server", "server.mjs"), "--window", "200000"]);
+    expect(dflt.out).toMatch(/of a 1M window/);
+    expect(narrow.out).toMatch(/of a 200k window/);
+  });
+
+  it("rejects a --window that would make the share meaningless (exit 2)", () => {
+    const r = run(["weigh", path.join(SKILLS, "good-skill"), "--window", "0"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/--window/);
+  });
 });

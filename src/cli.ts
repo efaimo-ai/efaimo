@@ -64,7 +64,13 @@ function collectPairs(sep: string) {
 }
 
 function colorSetup(opts: { color?: boolean }): void {
-  setColor(opts.color !== false && process.env.NO_COLOR === undefined);
+  // Escape codes are noise once stdout is a file or another tool's stdin, and
+  // `efaimo weigh > report.txt` is a normal thing to do. So colour needs both
+  // the user's consent and a terminal to write to; FORCE_COLOR is the escape
+  // hatch for CI that renders ANSI in its log viewer.
+  const forced = process.env.FORCE_COLOR !== undefined && process.env.FORCE_COLOR !== "0";
+  const wanted = opts.color !== false && process.env.NO_COLOR === undefined;
+  setColor(wanted && (forced || process.stdout.isTTY === true));
 }
 
 function windowSetup(opts: { window?: string }): void {

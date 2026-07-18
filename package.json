@@ -46,6 +46,7 @@
   },
   "files": [
     "dist",
+    "examples",
     "SKILL.md",
     "NOTICE",
     "CHANGELOG.md",
