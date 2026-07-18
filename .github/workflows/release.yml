@@ -1,17 +1,22 @@
 name: release
 
-# Publishes to npm with provenance when a v* tag is pushed.
-# Requires the NPM_TOKEN repository secret (an npm automation token).
+# Publishes to npm with provenance via OIDC Trusted Publishing when a v* tag is
+# pushed. No secret token: the id-token permission lets npm authenticate to the
+# registry through the trusted publisher (efaimo-ai/efaimo + release.yml)
+# configured on npmjs.com. workflow_dispatch is kept for manual releases; a
+# dispatch on an already-published version stops at npm's version-conflict
+# check, which doubles as an auth smoke test without republishing.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # provenance
+      id-token: write # OIDC trusted publishing + provenance
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -27,6 +32,7 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: node dist/cli.js check --skill ./SKILL.md --strict
+      # OIDC trusted publishing needs npm >= 11.5.1; the Node 24 runner may bundle
+      # an older 11.x, so upgrade npm before publishing.
+      - run: npm install -g npm@latest
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
