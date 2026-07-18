@@ -3,6 +3,7 @@ import type { CheckReport, Finding, ServerWeighResult, SkillSetWeighResult } fro
 import type { CheckSkillResult } from "../check/check.js";
 import type { Scenario, TestReport } from "../testing/harness.js";
 import type { WeighDiff } from "../weigh/diff.js";
+import { formatWindowShare } from "../weigh/window.js";
 import { sortFindings } from "../core/grade.js";
 import { VERSION } from "../version.js";
 
@@ -172,9 +173,8 @@ export function renderServerWeighPretty(w: ServerWeighResult): string {
   lines.push(`tools ${w.toolCount}   resources ${w.resourceCount}   prompts ${w.promptCount}`);
   lines.push("");
   lines.push("context cost of tool definitions (o200k tokens, estimated)");
-  const pct = ((w.totals.claudeStyle / 200000) * 100).toFixed(1);
   lines.push(`  raw JSON        ${n(w.totals.rawJson).padStart(8)}`);
-  lines.push(`  Claude-style    ${n(w.totals.claudeStyle).padStart(8)}   (~${pct}% of a 200k window)`);
+  lines.push(`  Claude-style    ${n(w.totals.claudeStyle).padStart(8)}   (${formatWindowShare(w.totals.claudeStyle)})`);
   lines.push(`  OpenAI tools    ${n(w.totals.openaiTools).padStart(8)}`);
   if (w.instructionsTokens > 0) lines.push(`  server instructions ${n(w.instructionsTokens).padStart(4)}`);
   if (w.anthropicExactTotal !== undefined) {

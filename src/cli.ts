@@ -7,9 +7,11 @@ import { VERSION } from "./version.js";
 import { resolveTarget, type ResolvedTarget } from "./targets/resolve.js";
 import { loadClientServers, SUPPORTED_CLIENTS } from "./targets/clientConfigs.js";
 import { introspectServer } from "./clients/introspect.js";
+import { RC_VERSION } from "./clients/rawprobe.js";
 import { weighServer, weighSkills } from "./weigh/weigh.js";
 import { findSkills } from "./skills/parse.js";
 import { diffServerWeigh } from "./weigh/diff.js";
+import { DEFAULT_CONTEXT_WINDOW, formatWindowShare, setContextWindow } from "./weigh/window.js";
 import { checkMcpRepoOnly, checkMcpTarget, checkSkillSet, type CheckSkillResult } from "./check/check.js";
 import {
   renderCheckPretty,
@@ -65,6 +67,13 @@ function colorSetup(opts: { color?: boolean }): void {
   setColor(opts.color !== false && process.env.NO_COLOR === undefined);
 }
 
+function windowSetup(opts: { window?: string }): void {
+  if (opts.window === undefined) return;
+  const n = Number(opts.window);
+  if (!Number.isFinite(n) || n <= 0) fail(`--window must be a positive number of tokens, got "${opts.window}"`);
+  setContextWindow(n);
+}
+
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`));
   process.exit(2);
@@ -103,6 +112,7 @@ interface CommonOpts {
   color?: boolean;
   json?: boolean;
   md?: boolean;
+  window?: string;
   timeout: string;
   header?: Record<string, string>;
   env?: Record<string, string>;
@@ -127,6 +137,7 @@ program
   .option("--allow-increase <pct>", "with --diff: exit 1 if the increase exceeds pct percent")
   .option("--badge [file]", "write an SVG badge + shields endpoint JSON")
   .option("--anthropic [model]", "also measure exact Claude tokens via the count_tokens API (needs ANTHROPIC_API_KEY)")
+  .option("--window <tokens>", "context window the share is reported against", String(DEFAULT_CONTEXT_WINDOW))
   .option("--no-color", "disable colors")
   .action(async (targetArg: string | undefined, opts: CommonOpts & {
     client?: string;
@@ -139,6 +150,7 @@ program
     anthropic?: string | boolean;
   }) => {
     colorSetup(opts);
+    windowSetup(opts);
     const timeoutMs = seconds(opts.timeout) * 1000;
     const maxTokens = parseNumberOpt(opts.maxTokens, "--max-tokens");
     const allowIncreasePct = parseNumberOpt(opts.allowIncrease, "--allow-increase");
@@ -231,7 +243,7 @@ program
         if (mcpTotals > 0) {
           console.log(
             pc.bold(
-              `\ncombined MCP context cost (Claude-style, o200k est.): ${mcpTotals.toLocaleString("en-US")} tokens (~${((mcpTotals / 200000) * 100).toFixed(1)}% of a 200k window)`,
+              `\ncombined MCP context cost (Claude-style, o200k est.): ${mcpTotals.toLocaleString("en-US")} tokens (${formatWindowShare(mcpTotals)})`,
             ),
           );
         }
@@ -286,6 +298,7 @@ program
   .option("--md", "print Markdown")
   .option("--badge [file]", "write a grade badge SVG + shields endpoint JSON")
   .option("--anthropic [model]", "use exact Claude token counts where relevant")
+  .option("--window <tokens>", "context window the share is reported against", String(DEFAULT_CONTEXT_WINDOW))
   .option("--no-color", "disable colors")
   .action(async (targetArg: string | undefined, opts: CommonOpts & {
     mcp?: boolean;
@@ -298,6 +311,7 @@ program
     anthropic?: string | boolean;
   }) => {
     colorSetup(opts);
+    windowSetup(opts);
     if (!targetArg) fail("nothing to check: pass a target (see --help)");
     if (opts.mcp && opts.skill) fail("--mcp and --skill are mutually exclusive");
     const timeoutMs = seconds(opts.timeout) * 1000;
@@ -359,10 +373,23 @@ program
       if (target.kind !== "http") {
         console.error(pc.yellow("note: the official conformance suite drives http targets (--url); skipping for this target"));
       } else {
-        console.error(pc.dim("\nrunning official MCP conformance suite (npx @modelcontextprotocol/conformance)...\n"));
+        // The `latest` line of the conformance suite predates the 2026-07-28
+        // revision, so it silently tests the old protocol. The RC scenarios
+        // ship on the `alpha` line only; --spec-version scopes them to the
+        // revision efaimo is about.
+        const args = [
+          "-y",
+          "@modelcontextprotocol/conformance@alpha",
+          "server",
+          "--url",
+          target.url,
+          "--spec-version",
+          RC_VERSION,
+        ];
+        console.error(pc.dim(`\nrunning official MCP conformance suite:\n  npx ${args.slice(1).join(" ")}\n`));
         // cross-spawn resolves npx(.cmd) without a shell, so target.url is passed
         // as a literal argument (never interpreted by cmd.exe).
-        const r = crossSpawn.sync("npx", ["-y", "@modelcontextprotocol/conformance", "server", "--url", target.url], {
+        const r = crossSpawn.sync("npx", args, {
           stdio: "inherit",
         });
         if (r.status !== 0) console.error(pc.yellow(`conformance suite exited with code ${r.status ?? "unknown"}`));

@@ -2,6 +2,7 @@ import type { Finding, McpRule, McpRuleContext, ProbeOutcome, Severity } from ".
 import { scanTextForInjection } from "../injection.js";
 import { looksLikeInitGate } from "../../clients/rawprobe.js";
 import { formatTokens, truncate } from "../../util/misc.js";
+import { formatWindowShare } from "../../weigh/window.js";
 
 const RC = "2026-07-28";
 
@@ -621,7 +622,7 @@ const e128: McpRule = {
           ruleId: "E128",
           severity: "warn",
           title: "total context tax",
-          message: `tool definitions alone are ~${formatTokens(total)} tokens (~${((total / 200000) * 100).toFixed(1)}% of a 200k window, estimated) before any work happens`,
+          message: `tool definitions alone are ~${formatTokens(total)} tokens (${formatWindowShare(total)}, estimated) before any work happens`,
           fixHint: "trim descriptions/schemas, split the server, or rely on deferred tool loading",
         },
       ];
@@ -632,7 +633,7 @@ const e128: McpRule = {
           ruleId: "E128",
           severity: "warn",
           title: "total context tax",
-          message: `tool definitions are ~${formatTokens(total)} tokens (~${((total / 200000) * 100).toFixed(1)}% of a 200k window)`,
+          message: `tool definitions are ~${formatTokens(total)} tokens (${formatWindowShare(total)})`,
           fixHint: "run \`efaimo weigh\` for the per-tool breakdown",
         },
       ];
