@@ -58,7 +58,7 @@ frontier Claude models (Fable 5, Opus 4.8/4.7/4.6, Sonnet 5, Sonnet 4.6) are
 local models, where identical tool definitions cost five times the share.
 
 Because the denominator is an assumption rather than a measurement, efaimo
-always names it in the output ("~5.9% of a 1M window") and lets you set your
+always names it in the output ("~4.3% of a 1M window") and lets you set your
 own with `--window`:
 
 ```bash
