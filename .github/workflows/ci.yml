@@ -30,6 +30,13 @@ jobs:
       - run: pnpm test
       - name: dogfood (check own SKILL.md)
         run: node dist/cli.js check --skill ./SKILL.md --strict
+      # The composite Action is what Marketplace users install, and it runs the
+      # PUBLISHED package rather than this checkout, so it needs its own test:
+      # nothing else here would notice if action.yml broke.
+      - name: dogfood (run our own Action)
+        uses: ./
+        with:
+          command: check --skill ./SKILL.md --strict
       - name: smoke (weigh a real MCP server)
         shell: bash
         # Network-dependent (npx cold-download + boot); retry so a slow runner is
