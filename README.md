@@ -192,15 +192,28 @@ your context window.
 Focused tools already own single slices of this space, and some are very good.
 efaimo is the one tool that covers the whole audit surface. As of mid-2026:
 
-| | efaimo | [skill-validator](https://github.com/agent-ecosystem/skill-validator) | [upskill](https://github.com/huggingface/upskill) | [mcp-spec-check](https://github.com/Roee-Tsur/mcp-spec-check) | [conformance](https://github.com/modelcontextprotocol/conformance) (official) |
-|---|---|---|---|---|---|
-| Agent Skills linting | yes | yes | no | no | no |
-| Skill token cost | yes (3-level split) | yes | no | no | no |
-| Skill outcome testing | with/without A/B trials (experimental) | static LLM scoring | yes (generate + eval, code agents) | no | no |
-| MCP tool-definition cost | yes (3 serializations, `--anthropic` exact) | no | no | no | no |
-| MCP quality rules | yes | no | no | no | no |
-| 2026-07-28 readiness | migration diff: what breaks and how to fix | no | no | yes/no verdict | official test suite |
-| CI budget gate + badge | yes | no | no | no | no |
+| | efaimo | [skill-validator](https://github.com/agent-ecosystem/skill-validator) | [skillgrade](https://github.com/mgechev/skillgrade) | [upskill](https://github.com/huggingface/upskill) | [mcp-spec-check](https://github.com/Roee-Tsur/mcp-spec-check) | [conformance](https://github.com/modelcontextprotocol/conformance) (official) |
+|---|---|---|---|---|---|---|
+| Agent Skills linting | yes | yes | no | no | no | no |
+| Skill token cost | yes (3-level split) | yes | no | no | no | no |
+| Skill outcome testing | with/without A/B trials (experimental) | static LLM scoring | **yes, and more thoroughly**: Docker-isolated runs, script + LLM-rubric graders, weighted scores, CI pass-rate gates | yes (generate + eval, code agents) | no | no |
+| MCP tool-definition cost | yes (3 serializations, `--anthropic` exact) | no | no | no | no | no |
+| MCP quality rules | yes | no | no | no | no | no |
+| 2026-07-28 readiness | migration diff: what breaks and how to fix | no | no | no | yes/no verdict | official test suite |
+| CI budget gate + badge | yes (token budget) | no | pass-rate threshold | no | no | no |
+
+Read that table honestly: on skill outcome testing, `skillgrade` is the more
+serious tool and we would use it over our own `efaimo test` for anything
+depending on the result. Ours is one experimental subcommand in an audit CLI;
+theirs is a testing framework. efaimo's claim is the row count, not any single
+row.
+
+[SkillsBench](https://github.com/benchflow-ai/skillsbench), whose paper this
+README cites, is not in the table because it is a benchmark rather than a tool
+you point at your own work: a fixed suite of tasks with packaged environments
+and verifiers, extensible by contributing tasks upstream. Useful for the
+question "do skills help in general", which is why we cite it, and not for
+"does mine help", which is what `efaimo test` and `skillgrade` answer.
 
 efaimo runs the official conformance suite for you (`check --conformance` on
 http targets) and complements security scanners such as Snyk agent-scan and the
