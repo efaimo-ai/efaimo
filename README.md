@@ -128,7 +128,7 @@ stateless protocol, so a 2026-07-28 server audits fine) and reports two things,
 separately. First, a **quality grade** for what models actually experience:
 descriptions, schemas, annotations, tool count, token cost. Second, an ungraded
 **migration diff** for the 2026-07-28 stateless spec (which removes
-`initialize`, sessions, Sampling, Roots, and Logging, and requires
+`initialize` and sessions, deprecates Sampling, Roots, and Logging, and requires
 `server/discover`, `resultType`, and cache fields): exactly what will break and
 how to fix it, each rule naming the SEP it came from. Readiness never drags the
 grade; not having migrated to a spec that is not final until 2026-07-28 is a
@@ -221,6 +221,9 @@ Or add it to a project with `npm i -D efaimo`, or the GitHub Action:
   with:
     command: check --skill ./skills --strict
 ```
+
+The Action is listed on the
+[GitHub Marketplace](https://github.com/marketplace/actions/efaimo).
 
 Gate a pull request on context-window growth, too:
 
