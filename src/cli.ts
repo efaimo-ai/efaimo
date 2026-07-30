@@ -379,13 +379,21 @@ program
       if (target.kind !== "http") {
         console.error(pc.yellow("note: the official conformance suite drives http targets (--url); skipping for this target"));
       } else {
-        // The `latest` line of the conformance suite predates the 2026-07-28
-        // revision, so it silently tests the old protocol. The RC scenarios
-        // ship on the `alpha` line only; --spec-version scopes them to the
-        // revision efaimo is about.
+        // The `latest` line of the conformance suite (0.1.16) predates the
+        // 2026-07-28 revision, so it silently tests the old protocol. Those
+        // scenarios ship on the `alpha` line only; --spec-version scopes them
+        // to the revision efaimo is about.
+        //
+        // Pinned to an exact version, because a dist-tag is not a pin. `alpha`
+        // moved from 0.2.0-alpha.9 to 0.2.0-alpha.10 on 2026-07-27, and we went
+        // on reporting "the official conformance suite" for a build nobody here
+        // had run: the same "we do not know what we ran" bug this block was
+        // written to fix, through the other door. Bumping it means re-reading
+        // `server --help` first; the two flags below were confirmed against
+        // 0.2.0-alpha.10.
         const args = [
           "-y",
-          "@modelcontextprotocol/conformance@alpha",
+          "@modelcontextprotocol/conformance@0.2.0-alpha.10",
           "server",
           "--url",
           target.url,

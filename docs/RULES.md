@@ -9,13 +9,12 @@ Grade starts at 100; each error costs 15, each warning 5, each info 1.
 MCP checks split into **2026-07-28 readiness** (E101-E118) and **quality**
 (E121-E130); skill checks are S1xx. **Only quality and skill findings are
 graded.** Readiness findings are reported as a separate, ungraded **migration
-diff**: the stateless revision they target is a locked Release Candidate
-(2026-05-21) that does not finalize until 2026-07-28, and not yet migrating to
-an unreleased spec is a to-do, not a defect. Readiness severities still order
-the diff by urgency, but the diff never affects the grade, the badge, or the
-exit code (including `--strict`). Once the spec ratifies, expect readiness to
-start counting in a minor release. Source-pattern rules are heuristics and say
-so in their detail line.
+diff**: the stateless revision they target published on 2026-07-28, and a
+migration you have not made yet is a to-do, not a defect in what you shipped.
+Readiness severities still order the diff by urgency, but the diff never affects
+the grade, the badge, or the exit code (including `--strict`). Now that the spec
+has published, expect readiness to start counting in a minor release.
+Source-pattern rules are heuristics and say so in their detail line.
 
 ## MCP readiness (E101-E118)
 

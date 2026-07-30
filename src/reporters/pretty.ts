@@ -67,7 +67,7 @@ export function renderCheckPretty(report: CheckReport): string {
       lines.push(
         paint(pc.bold, `2026-07-28 readiness`) +
           `  ${r.findings.length} item${r.findings.length === 1 ? "" : "s"} to migrate ` +
-          paint(pc.dim, "(a migration diff, not graded: the spec finalizes 2026-07-28)"),
+          paint(pc.dim, "(a migration diff, not graded)"),
       );
       for (const f of r.findings) renderFinding(lines, f);
     } else {

@@ -210,8 +210,8 @@ export interface CheckReport {
   grade: GradeInfo;
   /**
    * MCP only: 2026-07-28 readiness findings (E101-E118), reported as an
-   * ungraded migration diff. The target spec is not final until 2026-07-28,
-   * so unreadiness is a to-do list, not a quality defect.
+   * ungraded migration diff: a migration not yet made is a to-do list, not a
+   * quality defect in what shipped.
    */
   readiness?: { findings: Finding[]; counts: { error: number; warn: number; info: number } };
   notes: string[];

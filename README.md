@@ -131,15 +131,15 @@ descriptions, schemas, annotations, tool count, token cost. Second, an ungraded
 `initialize` and sessions, deprecates Sampling, Roots, and Logging, and requires
 `server/discover`, `resultType`, and cache fields): exactly what will break and
 how to fix it, each rule naming the SEP it came from. Readiness never drags the
-grade; not having migrated to a spec that is not final until 2026-07-28 is a
-to-do list, not a defect. Full list: [docs/RULES.md](./docs/RULES.md).
+grade; a migration you have not made yet is a to-do list, not a defect in what
+you shipped. Full list: [docs/RULES.md](./docs/RULES.md).
 
 <p align="center">
   <img src="assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
 </p>
 
-*(That is the official reference server: solid quality, four things to migrate
-before the 28th.)*
+*(That is the official reference server: solid quality, four things left to
+migrate.)*
 
 <details>
 <summary>The same output as copyable text</summary>
@@ -151,8 +151,7 @@ grade A (95)   quality: 0 errors  1 warning  0 info
   ! E122  tool "echo": description misses 3/4 quality axes (length 40..600;
           says when to use it; mentions the result)
 
-2026-07-28 readiness  4 items to migrate (a migration diff, not graded: the
-spec finalizes 2026-07-28)
+2026-07-28 readiness  4 items to migrate (a migration diff, not graded)
   ! E104  server declares the logging capability; MCP Logging is deprecated in
           2026-07-28 (SEP-2577) and logging/setLevel is removed
   ! E106  server/discover is not implemented (-32601 Method not found)
@@ -286,8 +285,8 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 | **E121 to E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
 
 Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
-findings (E101-E118) are reported as an ungraded migration diff until the spec
-ratifies. Every finding carries a stable id you can suppress or link. See
+findings (E101-E118) are reported as an ungraded migration diff. Every finding
+carries a stable id you can suppress or link. See
 [docs/RULES.md](./docs/RULES.md).
 
 ## Roadmap
@@ -295,8 +294,8 @@ ratifies. Every finding carries a stable id you can suppress or link. See
 - Harden `efaimo test`: a separately chosen judge model, confidence intervals on
   the delta, multi-turn tool-use trials, and judge calibration, so the
   experimental harness earns unqualified trust.
-- Track the 2026-07-28 spec to ratification, then start grading readiness (today
-  it is an ungraded migration diff on purpose).
+- The 2026-07-28 spec published on schedule; start counting readiness toward the
+  grade in a minor release (today it is an ungraded migration diff on purpose).
 - A public, continuously updated Agent Skills Quality Index over a broad corpus.
 
 ## Stability

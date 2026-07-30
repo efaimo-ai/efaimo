@@ -21,8 +21,10 @@ import type { ResolvedTarget } from "../targets/resolve.js";
 import { VERSION } from "../version.js";
 
 function buildReport(surface: Surface, target: string, findings: Finding[], notes: string[]): CheckReport {
-  // MCP readiness findings (E101-E118) are a migration diff for a spec that is
-  // not final until 2026-07-28; they are reported separately and never graded.
+  // MCP readiness findings (E101-E118) are a migration diff for the 2026-07-28
+  // spec: a migration not yet made is a to-do list, not a defect in what
+  // shipped. Reported separately and never graded. (The spec published on
+  // 2026-07-28; whether readiness starts counting is ADR-014's open decision.)
   const readinessAll: Finding[] = [];
   const gradedAll: Finding[] = [];
   for (const f of findings) {

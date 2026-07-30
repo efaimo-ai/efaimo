@@ -185,7 +185,7 @@ const e105: McpRule = {
           severity: "warn",
           title: "requires the removed initialize handshake",
           message: `the server rejected a bare stateless tools/list as not initialized (${bare.errorMessage ?? `code ${bare.errorCode}`})`,
-          detail: `${RC} removes initialize and sessions; RC servers answer bare requests carrying version info in _meta. Whether an answering server is RC-conformant is judged separately (E107 resultType, E118 cache fields, E106 server/discover).`,
+          detail: `${RC} removes initialize and sessions; stateless servers answer bare requests carrying version info in _meta. Whether an answering server is fully ${RC}-conformant is judged separately (E107 resultType, E118 cache fields, E106 server/discover).`,
           fixHint: "upgrade to a 2.x SDK, or accept requests without a prior initialize",
         },
       ];
@@ -237,7 +237,7 @@ const e107: McpRule = {
         severity: "info",
         title: "results missing resultType",
         message: `results do not carry the resultType field required in ${RC} ("complete" | "input_required")`,
-        detail: "the RC requires resultType on every result (SEP-2322); on list results the value must be \"complete\". RC clients treat missing resultType from earlier-protocol servers as \"complete\", so this is informational until you upgrade.",
+        detail: `${RC} requires resultType on every result (SEP-2322); on list results the value must be "complete". ${RC} clients treat missing resultType from earlier-protocol servers as "complete", so this is informational until you upgrade.`,
       },
     ];
   },
@@ -284,7 +284,7 @@ const e112: McpRule = {
         ruleId: "E112",
         severity: "warn",
         title: "nondeterministic tools/list order",
-        message: "tool order differed across two fresh connections; deterministic ordering enables prompt-cache hits in RC hosts",
+        message: "tool order differed across two fresh connections; deterministic ordering enables prompt-cache hits in stateless hosts",
         fixHint: "sort tools stably before returning them",
       },
     ];
