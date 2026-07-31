@@ -58,6 +58,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "spec:drift": "node scripts/spec-drift.mjs",
     "test:watch": "vitest",
     "prepublishOnly": "npm run typecheck && npm run build && npm run test"
   },

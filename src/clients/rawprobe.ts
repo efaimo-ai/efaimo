@@ -49,11 +49,16 @@ function toOutcome(reply: RpcReply, timeoutMessage: string): ProbeOutcome {
  * inconclusive; a crash is its own signal. This keeps E105 from false-flagging a
  * healthy but slow server, the worst verdict a readiness checker can emit.
  *
- * Detection is by message, not by error code: the codes SDKs use here are
+ * Detection is by message, not by error code, and the spec that published on
+ * 2026-07-28 is the argument for why. The codes SDKs use here are
  * implementation-defined (TS StreamableHTTP sends -32000 for both "Server not
  * initialized" and "Mcp-Session-Id header is required", -32001 for "Session not
- * found"), -32002 means Resource-not-found in the 2025 specs, and the RC
- * reserves -32022 for UnsupportedProtocolVersion, so no code is diagnostic.
+ * found"), and the MCP-defined ones MOVED between the locked RC and the
+ * published spec: MissingRequiredClientCapability went -32003 to -32021 and
+ * UnsupportedProtocolVersion went -32004 to -32022, with -32020 HeaderMismatch
+ * added alongside them. -32002 (resource not found) is retired outright,
+ * replaced by -32602 and promised never to be reused. Matching on numbers
+ * would have rotted here on 2026-07-28; matching on messages did not.
  */
 export function looksLikeInitGate(o: ProbeOutcome): boolean {
   if (o.kind !== "error") return false;
@@ -252,8 +257,10 @@ async function probeStdio(
   // not timed out), to avoid a second long wait on an unresponsive server.
   if (!s1.exited && bareOutcome.kind !== "timeout") {
     const d = await s1.request("server/discover", rcMeta(), discoverT);
-    if (d.result) results.serverDiscover = { supported: true };
-    else if (d.error && d.error.code === -32601) {
+    if (d.result) {
+      results.serverDiscover = { supported: true };
+      results.discoverCacheFieldsPresent = hasCacheFields(d.result);
+    } else if (d.error && d.error.code === -32601) {
       results.serverDiscover = { supported: false, errorMessage: `${d.error.code} ${d.error.message}` };
     } else if (d.error) {
       results.serverDiscover = { skipped: `inconclusive (${d.error.code} ${d.error.message})` };
@@ -305,8 +312,13 @@ export async function postMessage(
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
       "mcp-protocol-version": protocolVersion,
-      // Mcp-Method is well-defined (SEP-2243); Mcp-Name is required too but its
-      // value is not the method name, so it is omitted rather than sent wrong.
+      // Mcp-Method mirrors the body's method and is required on every request
+      // (SEP-2243). Mcp-Name is NOT required here: the published spec requires
+      // it only on tools/call, resources/read and prompts/get, where it carries
+      // params.name or params.uri, and efaimo sends none of those. Omitting it
+      // is correct rather than a known gap. Sending a wrong value would be
+      // worse than sending none: a server MUST reject a header that disagrees
+      // with the body, now with a dedicated code (-32020 HeaderMismatch).
       ...(method ? { "Mcp-Method": method } : {}),
       ...(sessionId ? { "mcp-session-id": sessionId } : {}),
       ...(extraHeaders ?? {}),
@@ -530,8 +542,10 @@ async function probeHttp(
         undefined,
         RC_VERSION,
       );
-      if (d.body?.result) results.serverDiscover = { supported: true };
-      else if (d.body?.error && d.body.error.code === -32601) {
+      if (d.body?.result) {
+        results.serverDiscover = { supported: true };
+        results.discoverCacheFieldsPresent = hasCacheFields(d.body.result);
+      } else if (d.body?.error && d.body.error.code === -32601) {
         results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
       } else if (d.body?.error) {
         results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };
@@ -585,8 +599,12 @@ async function probeHttp(
         }
         if (results.serverDiscover === undefined) {
           const d = await postMessage(url, headers, { jsonrpc: "2.0", id: 4, method: "server/discover", params: {} }, sessionId);
-          if (d.body?.result) results.serverDiscover = { supported: true };
-          else if (d.body?.error && d.body.error.code === -32601) {
+          if (d.body?.result) {
+            results.serverDiscover = { supported: true };
+            // ??= for the same reason as the two lines above: never clobber a
+            // measurement the bare stateless path already took.
+            results.discoverCacheFieldsPresent ??= hasCacheFields(d.body.result);
+          } else if (d.body?.error && d.body.error.code === -32601) {
             results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
           } else if (d.body?.error) {
             results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };

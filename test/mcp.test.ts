@@ -20,8 +20,8 @@ function target(): Extract<ResolvedTarget, { kind: "stdio" }> {
   return { kind: "stdio", command: process.execPath, args: [SERVER], label: "fixture-server" };
 }
 
-function rcTarget(): Extract<ResolvedTarget, { kind: "stdio" }> {
-  return { kind: "stdio", command: process.execPath, args: [RC_SERVER], label: "rc-fixture-server" };
+function rcTarget(env?: Record<string, string>): Extract<ResolvedTarget, { kind: "stdio" }> {
+  return { kind: "stdio", command: process.execPath, args: [RC_SERVER], label: "rc-fixture-server", env };
 }
 
 describe("mcp introspection + rules (live fixture server)", () => {
@@ -94,6 +94,30 @@ describe("mcp introspection + rules (live fixture server)", () => {
     expect(res.report.counts.error).toBe(0);
     expect(res.report.readiness!.findings.length).toBe(0);
     expect(res.report.grade.letter).toBe("A");
+  });
+
+  // The spec moved under these two between the locked RC and what published on
+  // 2026-07-28. Both cases are read from the fixture's env switches rather than
+  // a second fixture file, so the conformant path stays the default.
+  it("still reads identity from the locked-RC shape (top-level serverInfo)", async () => {
+    const intro = await introspectServer(rcTarget({ RC_FIXTURE_LEGACY_SERVERINFO: "1" }), { timeoutMs: 15000 });
+    // The published spec deleted DiscoverResult.serverInfo, but servers built
+    // against the RC still send it, and dropping them would be a regression
+    // dressed as conformance.
+    expect(intro.serverInfo?.name).toBe("rc-fixture");
+  });
+
+  it("E118 catches missing cache fields on server/discover, and names that surface", async () => {
+    const res = await checkMcpTarget(rcTarget({ RC_FIXTURE_DISCOVER_NO_CACHE: "1" }), {
+      timeoutMs: 15000,
+      probe: true,
+    });
+    const e118 = [...res.report.findings, ...(res.report.readiness?.findings ?? [])].find((f) => f.ruleId === "E118");
+    // DiscoverResult extends CacheableResult only in the published spec, so a
+    // server that migrated against the RC passes tools/list and fails here.
+    expect(e118, "E118 should fire when server/discover omits ttlMs and cacheScope").toBeDefined();
+    expect(e118!.message).toMatch(/server\/discover result omits/);
+    expect(e118!.message).not.toMatch(/tools\/list/);
   });
 
   it("errors clearly on an unreachable server", async () => {

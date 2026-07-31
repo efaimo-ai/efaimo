@@ -6,6 +6,39 @@ All notable changes to efaimo are documented here. Format follows
 
 ## [Unreleased]
 
+The MCP specification published on 2026-07-28. The readiness rules had been
+written against the Release Candidate locked 2026-05-21, and the two are not
+the same document. Details in `docs/DECISIONS.md` ADR-026.
+
+### Added
+
+- `npm run spec:drift`, plus a daily `spec-drift` workflow: fails when an MCP
+  revision newer than the one efaimo targets publishes, or when the targeted
+  revision changes under its own tag. The 2026-07-28 publication went unnoticed
+  in this repo for four days because nothing watched the spec itself.
+
+### Changed
+
+- `check --conformance` pins `@modelcontextprotocol/conformance@0.2.0-alpha.10`
+  rather than the floating `alpha` tag, which had moved off `alpha.9` on
+  2026-07-27. A dist-tag is not a pin, and the old one meant reporting "the
+  official conformance suite" for a build nobody here had run.
+- Readiness output no longer claims the spec "finalizes 2026-07-28". It has
+  published; the diff still prints ungraded.
+- Rule detail lines name the revision by its date instead of calling it "the
+  RC", which it no longer is.
+
+### Fixed
+
+- `check --mcp` and `weigh` lost server identity on servers that had finished
+  migrating. The published spec deleted `DiscoverResult.serverInfo` and moved
+  identity into `_meta["io.modelcontextprotocol/serverInfo"]`, and efaimo read
+  only the Release Candidate's field. Both shapes are read now, newest first.
+- E118 measured cache fields on `tools/list` only, while its own detail line
+  already listed `server/discover`. The published spec made `DiscoverResult`
+  extend `CacheableResult`, so that surface is required now, is measured now,
+  and the message names whichever surface failed.
+
 ## [0.1.0]
 
 First release.

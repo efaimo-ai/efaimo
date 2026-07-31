@@ -77,8 +77,16 @@ export interface ProbeResults {
   serverDiscover?: { supported: boolean; errorMessage?: string } | { skipped: string };
   /** Whether tools/list result carried the RC-required resultType field. */
   resultTypePresent?: boolean;
-  /** Whether tools/list result carried both RC-required ttlMs and cacheScope (SEP-2549). */
+  /** Whether tools/list result carried both required ttlMs and cacheScope (SEP-2549). */
   cacheFieldsPresent?: boolean;
+  /**
+   * Same question for the server/discover result, measured separately because
+   * the answer changed between the locked RC and the published spec: the RC's
+   * DiscoverResult extended plain Result, the published 2026-07-28 extends
+   * CacheableResult, so cache fields are required there now and were not then.
+   * Undefined when server/discover did not answer at all (E106's job).
+   */
+  discoverCacheFieldsPresent?: boolean;
   /** Same tool order across two fresh connections. */
   toolsOrderDeterministic?: boolean;
   /** Non-JSON noise observed on stdout before/between JSON-RPC messages (stdio only). */

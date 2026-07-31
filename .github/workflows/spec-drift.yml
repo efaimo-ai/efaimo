@@ -1,0 +1,38 @@
+name: spec-drift
+
+# Every other check in this repo points inward, at our own code, and runs when
+# our own code changes. This one points at the MCP specification that E101-E118
+# are a reading of, and it has to run when NOTHING here changes: the spec
+# published on 2026-07-28 while this repo sat untouched for eleven days, and
+# not one file said so (docs/DECISIONS.md ADR-026).
+#
+# Deliberately NOT part of ci.yml. A failure here is news about the world, not
+# a verdict on a commit, and it should not block an unrelated push. A failed
+# scheduled run is what actually reaches a founder who is away.
+on:
+  schedule:
+    # 06:00 UTC daily, which is mid-afternoon in Seoul.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+  # Also on pushes that touch what it watches or how it watches: re-pinning the
+  # schema or moving RC_VERSION should be checked in the same breath.
+  push:
+    branches: [main]
+    paths:
+      - "scripts/spec-drift.mjs"
+      - "scripts/spec-pin.json"
+      - "src/clients/rawprobe.ts"
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # No install and no build on purpose: the script is zero-dependency and
+      # reads RC_VERSION out of the TypeScript source, so it still runs when the
+      # build is broken. A drift check that needs a green build is unavailable
+      # exactly when you are mid-migration and need it most.
+      - run: node scripts/spec-drift.mjs

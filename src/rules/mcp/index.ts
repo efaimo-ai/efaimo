@@ -351,13 +351,23 @@ const e118: McpRule = {
   title: "missing cache fields (ttlMs, cacheScope)",
   surface: "mcp",
   check(ctx) {
-    if (ctx.probes?.cacheFieldsPresent !== false) return [];
+    // Two measured surfaces, not one. server/discover only became cacheable in
+    // the spec that published on 2026-07-28 (DiscoverResult extends
+    // CacheableResult); under the locked RC it extended plain Result, so a
+    // server that migrated against the RC can pass tools/list and still miss
+    // this. Undefined means the surface was never measured, which is not a
+    // finding: E106 already owns "server/discover did not answer".
+    const surfaces: string[] = [];
+    if (ctx.probes?.cacheFieldsPresent === false) surfaces.push("tools/list");
+    if (ctx.probes?.discoverCacheFieldsPresent === false) surfaces.push("server/discover");
+    if (!surfaces.length) return [];
+    const subject = surfaces.length > 1 ? `${surfaces.join(" and ")} results omit` : `${surfaces[0]} result omits`;
     return [
       {
         ruleId: "E118",
         severity: "warn",
         title: "missing cache fields (ttlMs, cacheScope)",
-        message: `tools/list result omits ttlMs and/or cacheScope, which ${RC} requires on list and resource-read results (SEP-2549, CacheableResult)`,
+        message: `${subject} ttlMs and/or cacheScope, which ${RC} requires on list and resource-read results (SEP-2549, CacheableResult)`,
         detail: "required on tools/list, prompts/list, resources/list, resources/read, resources/templates/list, and server/discover; cacheScope is \"public\" or \"private\"",
         fixHint: "return ttlMs and cacheScope on these results so clients can cache and stop polling; the 2.x SDKs add them for you",
       },

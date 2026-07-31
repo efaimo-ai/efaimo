@@ -13,11 +13,37 @@ import { RC_VERSION, rcMeta, postMessage, StdioSession } from "./rawprobe.js";
 
 const MAX_PAGES = 20;
 
+interface Identity {
+  name?: string;
+  version?: string;
+  title?: string;
+}
+
 interface DiscoverInfo {
   supportedVersions?: string[];
   capabilities?: Record<string, unknown>;
-  serverInfo?: { name?: string; version?: string; title?: string };
+  /**
+   * Locked-RC shape: identity as an ordinary DiscoverResult field. The spec
+   * that published on 2026-07-28 deleted it, so this is read only as a
+   * fallback for servers built against the RC.
+   */
+  serverInfo?: Identity;
+  /**
+   * Published-2026-07-28 shape: identity moved into _meta, where it is
+   * OPTIONAL ("Servers SHOULD include this field"). Read first.
+   */
+  _meta?: { "io.modelcontextprotocol/serverInfo"?: Identity };
   instructions?: string;
+}
+
+/**
+ * Newest shape first, then the RC's. Reading only the RC's field made efaimo
+ * report "identity unknown" for precisely the servers that had finished
+ * migrating, which is the worst direction for this error to point.
+ */
+function discoverIdentity(d: DiscoverInfo | undefined): Identity | undefined {
+  const found = d?._meta?.["io.modelcontextprotocol/serverInfo"] ?? d?.serverInfo;
+  return found ? { name: found.name, version: found.version, title: found.title } : undefined;
 }
 
 export async function introspectStateless(
@@ -135,13 +161,7 @@ function buildIntrospection(
     targetLabel: label,
     transport,
     httpTransport,
-    serverInfo: discover?.serverInfo
-      ? {
-          name: discover.serverInfo.name,
-          version: discover.serverInfo.version,
-          title: discover.serverInfo.title,
-        }
-      : undefined,
+    serverInfo: discoverIdentity(discover),
     protocolVersion: discover?.supportedVersions?.includes(RC_VERSION) ? RC_VERSION : undefined,
     instructions: discover?.instructions,
     capabilities: caps,

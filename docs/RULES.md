@@ -21,23 +21,23 @@ Source-pattern rules are heuristics and say so in their detail line.
 | id | sev | what it catches | source of truth |
 |---|---|---|---|
 | E101 | warn | depends on a pre-`2026-07-28` SDK line (TS `@modelcontextprotocol/sdk` 1.x, Python `mcp` 1.x) instead of the 2.x stateless line | changelog / SDK releases |
-| E102 | warn | source uses **Sampling** (`sampling/createMessage`), deprecated (SEP-2577) | draft changelog |
-| E103 | warn | source uses **Roots** (`roots/list`), deprecated (SEP-2577) | draft changelog |
-| E104 | warn | server declares the **logging** capability or source uses MCP Logging, deprecated (SEP-2577); `logging/setLevel` is removed | draft changelog |
+| E102 | warn | source uses **Sampling** (`sampling/createMessage`), deprecated (SEP-2577) | 2026-07-28 changelog |
+| E103 | warn | source uses **Roots** (`roots/list`), deprecated (SEP-2577) | 2026-07-28 changelog |
+| E104 | warn | server declares the **logging** capability or source uses MCP Logging, deprecated (SEP-2577); `logging/setLevel` is removed | 2026-07-28 changelog |
 | E105 | warn | the server does not answer a bare stateless `tools/list` (timeout, crash, or a not-initialized error), so it requires the removed `initialize` handshake. A server that answers (even with an error) is judged by E106/E107/E118 instead | SEP-2567 / stateless core |
-| E106 | warn | `server/discover` is not implemented (MUST in the RC, SEP-2575) | draft changelog |
-| E107 | info | results omit the required `resultType` field (`"complete"` \| `"input_required"`) | draft changelog |
-| E108 | info | source relies on removed SSE resumability (`Last-Event-ID`) | draft changelog |
+| E106 | warn | `server/discover` is not implemented (MUST in 2026-07-28, SEP-2575) | 2026-07-28 changelog |
+| E107 | info | results omit the required `resultType` field (`"complete"` \| `"input_required"`) | 2026-07-28 changelog |
+| E108 | info | source relies on removed SSE resumability (`Last-Event-ID`) | 2026-07-28 changelog |
 | E109 | info | auth advertises deprecated DCR (RFC 7591) with no detected CIMD support | PR #2858 / CIMD |
-| E110 | warn | source uses legacy elicitation (`elicitation/create`); replaced by MRTR `input_required` results (SEP-2322) | draft changelog |
+| E110 | warn | source uses legacy elicitation (`elicitation/create`); replaced by MRTR `input_required` results (SEP-2322) | 2026-07-28 changelog |
 | E111 | info | in-process session-state patterns; statelessness expects server-minted handles in tool args | stateless core |
-| E112 | warn | `tools/list` order is nondeterministic across connections (hurts prompt-cache hits) | draft changelog |
+| E112 | warn | `tools/list` order is nondeterministic across connections (hurts prompt-cache hits) | 2026-07-28 changelog |
 | E113 | info | no Server Card found at `/.well-known/mcp` (discovery metadata; heuristic path) | roadmap / Server Card WG |
-| E114 | info | source uses the removed `ping` utility | draft changelog |
-| E115 | info | source uses `resources/subscribe`, replaced by `subscriptions/listen` | draft changelog |
+| E114 | info | source uses the removed `ping` utility | 2026-07-28 changelog |
+| E115 | info | source uses `resources/subscribe`, replaced by `subscriptions/listen` | 2026-07-28 changelog |
 | E116 | warn | server prints non-JSON noise on stdout (breaks stdio framing) | transport basics |
-| E117 | warn | only the deprecated HTTP+SSE transport worked; Streamable HTTP failed | draft changelog |
-| E118 | warn | `tools/list` result omits the now-required `ttlMs`/`cacheScope` cache fields (SEP-2549, CacheableResult; also required on prompts/list, resources/list, resources/read, resources/templates/list, server/discover) | draft changelog |
+| E117 | warn | only the deprecated HTTP+SSE transport worked; Streamable HTTP failed | 2026-07-28 changelog |
+| E118 | warn | a `tools/list` or `server/discover` result omits the required `ttlMs`/`cacheScope` cache fields (SEP-2549, CacheableResult; also required on prompts/list, resources/list, resources/read, resources/templates/list). Both surfaces efaimo calls are measured and the message names the ones that failed. `server/discover` counts only since the published spec made `DiscoverResult` extend `CacheableResult`; under the locked RC it did not | 2026-07-28 changelog |
 
 ## MCP quality (E121-E130)
 
