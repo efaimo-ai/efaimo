@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { VERSION } from "../src/version.js";
 import { MCP_RULES } from "../src/rules/mcp/index.js";
@@ -29,6 +30,35 @@ describe("meta", () => {
     for (const r of [...MCP_RULES, ...SKILL_RULES]) {
       expect(rulesDoc, `RULES.md must document ${r.id}`).toContain(r.id);
     }
+  });
+
+  // Several working docs live in this directory but are kept out of the repo
+  // through .git/info/exclude, which is local and therefore invisible to anyone
+  // reading .gitignore. So a published file can cite a doc that no reader can
+  // open, and nothing says so: this repo went public with STATE, DECISIONS and
+  // SITE-HANDOFF staying private, and the first commit after that added two
+  // such citations. Tracked files only, so this works in a fresh clone where
+  // the private docs do not exist at all.
+  it("no published file cites a doc that was never published", () => {
+    const tracked = new Set(
+      execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split("\n").map((s) => s.trim()).filter(Boolean),
+    );
+    const docsDir = "docs" + "/";
+    const ref = new RegExp(`${docsDir}[A-Za-z0-9._-]+\\.md`, "g");
+    const offenders: string[] = [];
+    let scanned = 0;
+    for (const f of tracked) {
+      if (!/\.(md|ya?ml|ts|mjs|json)$/.test(f)) continue;
+      if (f === "test/meta.test.ts") continue; // builds the pattern above
+      scanned++;
+      for (const m of fs.readFileSync(path.join(root, f), "utf8").matchAll(ref)) {
+        if (!tracked.has(m[0])) offenders.push(`${f} cites ${m[0]}`);
+      }
+    }
+    // Empty harvest is a failure: if the scan stops finding files, it stops
+    // being a check while still reporting green.
+    expect(scanned, "scanned no files, so this proves nothing").toBeGreaterThan(5);
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -8,7 +8,8 @@ All notable changes to efaimo are documented here. Format follows
 
 The MCP specification published on 2026-07-28. The readiness rules had been
 written against the Release Candidate locked 2026-05-21, and the two are not
-the same document. Details in `docs/DECISIONS.md` ADR-026.
+the same document: `DiscoverResult.serverInfo` was deleted, `DiscoverResult`
+became cacheable, and three error codes were renumbered.
 
 ### Added
 

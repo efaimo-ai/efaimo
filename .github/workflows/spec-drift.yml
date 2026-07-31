@@ -4,7 +4,7 @@ name: spec-drift
 # our own code changes. This one points at the MCP specification that E101-E118
 # are a reading of, and it has to run when NOTHING here changes: the spec
 # published on 2026-07-28 while this repo sat untouched for eleven days, and
-# not one file said so (docs/DECISIONS.md ADR-026).
+# not one file here said so.
 #
 # Deliberately NOT part of ci.yml. A failure here is news about the world, not
 # a verdict on a commit, and it should not block an unrelated push. A failed
