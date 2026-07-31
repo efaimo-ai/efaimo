@@ -100,4 +100,13 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 
 </details>
 
+## Not in the corpus: skills efaimo publishes
+
+Graded by the same call on the same rules, and deliberately kept out of every number above. The corpus statistic is about public skills other people wrote; folding the author's own work into it would quietly change what that percentage means.
+
+| skill | grade | metadata | body | referenced |
+|---|---|---|---|---|
+| `efaimo` | A (100) | 58 | 626 | 0 files, 0 |
+| `mcp-stateless-migration` | A (100) | 104 | 1,397 | 3 files, 3,305 |
+
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>

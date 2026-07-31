@@ -1,16 +1,40 @@
 #!/usr/bin/env node
 // Skills Quality Index: grade a corpus of public Agent Skills with efaimo and
-// emit a markdown report. Fetch a reproducible corpus first with
-// scripts/skills-corpus.mjs (it writes <corpus-dir>/manifest.json).
+// emit a markdown report plus the same measurement as JSON. Fetch a
+// reproducible corpus first with scripts/skills-corpus.mjs (it writes
+// <corpus-dir>/manifest.json).
+//
 // Usage: node scripts/skills-index.mjs <corpus-dir> [out.md]
+//          [--json <out.json>] [--ours <skill-dir>]...
+//
+// The JSON exists because efaimo-ai renders this index and that site derives
+// every number it prints from a committed run at build time. A markdown table
+// is prose: a page cannot trace a number to it, and a gate cannot re-derive one
+// from it. So the same rows go out twice, and the JSON is the source.
+//
+// --ours grades skills efaimo publishes itself. They are kept in a SEPARATE
+// array, never merged into the corpus: the corpus statistic is "every public
+// skill in these three repos at these commits", and quietly adding our own
+// would make "97% of public skills score an A" a sentence about a population
+// that includes the author.
 import fs from "node:fs";
 import path from "node:path";
 import { checkSkillSet } from "../dist/index.js";
+import { VERSION } from "../dist/version.js";
 
-const corpus = process.argv[2];
-const out = process.argv[3] ?? "research/skills-index/REPORT.md";
+const argv = process.argv.slice(2);
+const valuesOf = (name) =>
+  argv.reduce((acc, a, i) => (a === name && argv[i + 1] ? [...acc, argv[i + 1]] : acc), []);
+const positional = argv.filter(
+  (a, i) => !a.startsWith("--") && !(i > 0 && argv[i - 1].startsWith("--")),
+);
+
+const corpus = positional[0];
+const out = positional[1] ?? "research/skills-index/REPORT.md";
+const outJson = valuesOf("--json")[0] ?? out.replace(/\.md$/, ".json");
+const ourDirs = valuesOf("--ours");
 if (!corpus) {
-  console.error("usage: node scripts/skills-index.mjs <corpus-dir> [out.md]");
+  console.error("usage: node scripts/skills-index.mjs <corpus-dir> [out.md] [--json <out.json>] [--ours <dir>]...");
   process.exit(2);
 }
 
@@ -41,26 +65,38 @@ function skillDirs(root) {
   return [...found];
 }
 
-const dirs = skillDirs(corpus);
-const rows = [];
-for (const dir of dirs) {
+async function gradeDir(dir, source) {
   try {
     const res = await checkSkillSet(dir, path.basename(dir));
     const s = res.perSkill[0];
     const w = res.weigh.perSkill[0];
-    rows.push({
+    return {
       name: s.name,
-      source: path.relative(corpus, dir).split(path.sep)[0],
+      source,
       grade: s.report.grade,
       counts: s.report.counts,
       ruleIds: s.report.findings.map((f) => f.ruleId),
       meta: w?.metadataTokens ?? 0,
       body: w?.bodyTokens ?? 0,
-    });
+      bodyLines: w?.bodyLines ?? 0,
+      refFiles: w?.refFileCount ?? 0,
+      refTokens: w?.refFileTokens ?? 0,
+    };
   } catch (e) {
-    rows.push({ name: path.basename(dir), source: "?", error: String(e.message ?? e) });
+    return { name: path.basename(dir), source, error: String(e.message ?? e) };
   }
 }
+
+const dirs = skillDirs(corpus);
+const rows = [];
+for (const dir of dirs) {
+  rows.push(await gradeDir(dir, path.relative(corpus, dir).split(path.sep)[0]));
+}
+
+// Skills efaimo publishes, graded by the same call on the same rules. Kept out
+// of `rows` on purpose: see the header note.
+const ours = [];
+for (const dir of ourDirs) ours.push(await gradeDir(dir, "efaimo"));
 
 const ok = rows.filter((r) => !r.error);
 const n = ok.length;
@@ -134,8 +170,43 @@ for (const r of failedRows) L.push(`| \`${r.name}\` | ${r.source} | (parse faile
 L.push("");
 L.push("</details>");
 L.push("");
+if (ours.length) {
+  L.push("## Not in the corpus: skills efaimo publishes");
+  L.push("");
+  L.push("Graded by the same call on the same rules, and deliberately kept out of every number above. The corpus statistic is about public skills other people wrote; folding the author's own work into it would quietly change what that percentage means.");
+  L.push("");
+  L.push("| skill | grade | metadata | body | referenced |");
+  L.push("|---|---|---|---|---|");
+  for (const r of ours) {
+    L.push(
+      r.error
+        ? `| \`${r.name}\` | (parse failed) | | | |`
+        : `| \`${r.name}\` | ${r.grade.letter} (${r.grade.score}) | ${r.meta} | ${r.body.toLocaleString("en-US")} | ${r.refFiles} files, ${r.refTokens.toLocaleString("en-US")} |`,
+    );
+  }
+  L.push("");
+}
 L.push(`<sub>Reproduce a row: \`npx efaimo check --skill <skill-dir>\`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>`);
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, L.join("\n") + "\n");
-console.log(`wrote ${out}: ${n} skills, ${withErrors} with errors, grades ${JSON.stringify(dist)}`);
+
+// The JSON carries ROWS, not conclusions. Whatever renders this (the site page,
+// and the site's numbers-trace gate) recomputes the distribution and the
+// medians from these rows independently, so a page can never bless its own
+// arithmetic by reading back a total it also printed.
+const json = {
+  tool: "efaimo",
+  version: VERSION,
+  generatedAt: new Date().toISOString().slice(0, 10),
+  corpus: manifest ?? null,
+  skills: rows,
+  ours,
+};
+fs.mkdirSync(path.dirname(outJson), { recursive: true });
+fs.writeFileSync(outJson, JSON.stringify(json, null, 2) + "\n");
+
+console.log(
+  `wrote ${out} and ${outJson}: ${n} skills, ${withErrors} with errors, grades ${JSON.stringify(dist)}` +
+    (ours.length ? `, plus ${ours.length} of our own (separate)` : ""),
+);
