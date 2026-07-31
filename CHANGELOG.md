@@ -31,6 +31,12 @@ became cacheable, and three error codes were renumbered.
 
 ### Fixed
 
+- `check --mcp` could hang forever on a stdio server. The readiness probes
+  cleaned up their spawned servers only on the happy path, so a probe that threw
+  left the child's stdin open; the child never saw EOF, never exited, and its
+  stdio handles kept the CLI's event loop alive. The report printed and then the
+  process simply never returned. Cleanup now runs in a `finally`, matching the
+  stateless introspection path next door, which already did.
 - `check --mcp` and `weigh` lost server identity on servers that had finished
   migrating. The published spec deleted `DiscoverResult.serverInfo` and moved
   identity into `_meta["io.modelcontextprotocol/serverInfo"]`, and efaimo read

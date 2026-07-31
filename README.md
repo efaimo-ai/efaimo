@@ -219,7 +219,7 @@ http targets) and complements security scanners such as Snyk agent-scan and the
 skills installer (`npx skills`) rather than replacing them. If your server is
 built on the TypeScript SDK, efaimo tells you what breaks and why, and
 [`@modelcontextprotocol/codemod`](https://www.npmjs.com/package/@modelcontextprotocol/codemod)
-(beta) rewrites the SDK v1 to v2 call sites for you. Diff, codemod, re-check.
+rewrites the SDK v1 to v2 call sites for you. Diff, codemod, re-check.
 
 ### "Doesn't tool search already solve this?"
 

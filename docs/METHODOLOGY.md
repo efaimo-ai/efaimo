@@ -53,9 +53,10 @@ can merge characters across element boundaries when tools are concatenated.
 Alongside the absolute token count, efaimo prints the share of a context window
 it represents. There is no correct denominator for that: the window belongs to
 whichever model the host is running, not to the server being measured. Current
-frontier Claude models (Fable 5, Opus 4.8/4.7/4.6, Sonnet 5, Sonnet 4.6) are
-**1M**, so that is the default. Haiku 4.5 is 200k, as are many non-Claude and
-local models, where identical tool definitions cost five times the share.
+frontier Claude models (Fable 5, Opus 5, Opus 4.8/4.7/4.6, Sonnet 5, Sonnet
+4.6) are **1M**, so that is the default. Haiku 4.5 is 200k, as are many
+non-Claude and local models, where identical tool definitions cost five times
+the share.
 
 Because the denominator is an assumption rather than a measurement, efaimo
 always names it in the output ("~4.3% of a 1M window") and lets you set your

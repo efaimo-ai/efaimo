@@ -15,7 +15,7 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
   # Also on pushes that touch what it watches or how it watches: re-pinning the
-  # schema or moving RC_VERSION should be checked in the same breath.
+  # schema or moving SPEC_VERSION should be checked in the same breath.
   push:
     branches: [main]
     paths:
@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 22
       # No install and no build on purpose: the script is zero-dependency and
-      # reads RC_VERSION out of the TypeScript source, so it still runs when the
+      # reads SPEC_VERSION out of the TypeScript source, so it still runs when the
       # build is broken. A drift check that needs a green build is unavailable
       # exactly when you are mid-migration and need it most.
       - run: node scripts/spec-drift.mjs

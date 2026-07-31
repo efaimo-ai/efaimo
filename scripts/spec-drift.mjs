@@ -42,9 +42,9 @@ async function main() {
   // here rather than restating it keeps this script from drifting from the
   // thing it is supposed to be watching.
   const probeSrc = readFileSync(join(ROOT, "src/clients/rawprobe.ts"), "utf8");
-  const target = probeSrc.match(/RC_VERSION\s*=\s*"(\d{4}-\d{2}-\d{2})"/)?.[1];
+  const target = probeSrc.match(/SPEC_VERSION\s*=\s*"(\d{4}-\d{2}-\d{2})"/)?.[1];
   if (!target) {
-    fail("could not read RC_VERSION from src/clients/rawprobe.ts; this script is watching nothing");
+    fail("could not read SPEC_VERSION from src/clients/rawprobe.ts; this script is watching nothing");
     return;
   }
   console.log(`efaimo targets MCP ${target}\n`);

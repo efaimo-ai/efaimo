@@ -3,8 +3,8 @@
  *
  * There is no single correct denominator: it is a property of the model the
  * host happens to be running, not of the server being measured. Every current
- * frontier Claude model (Fable 5, Opus 4.8/4.7/4.6, Sonnet 5, Sonnet 4.6) is
- * 1M; Haiku 4.5 is 200K, as are many non-Claude and local models, where the
+ * frontier Claude model (Fable 5, Opus 5, Opus 4.8/4.7/4.6, Sonnet 5, Sonnet
+ * 4.6) is 1M; Haiku 4.5 is 200K, as are many non-Claude and local models, where the
  * same tool definitions cost 5x the share shown here.
  *
  * So the share is always printed with the window it was computed against, and

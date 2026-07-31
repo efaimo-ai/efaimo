@@ -4,7 +4,7 @@ import { looksLikeInitGate } from "../../clients/rawprobe.js";
 import { formatTokens, truncate } from "../../util/misc.js";
 import { formatWindowShare } from "../../weigh/window.js";
 
-const RC = "2026-07-28";
+const SPEC = "2026-07-28";
 
 function isOutcome(x: unknown): x is ProbeOutcome {
   return !!x && typeof x === "object" && "ok" in (x as object);
@@ -52,7 +52,7 @@ const REPO_MATCH_RULES: RepoRuleSpec[] = [
     category: "sampling",
     severity: "warn",
     title: "uses deprecated Sampling",
-    message: (c) => `source references sampling/createMessage (${matchStr(c)}); Sampling is deprecated in ${RC} (SEP-2577)`,
+    message: (c) => `source references sampling/createMessage (${matchStr(c)}); Sampling is deprecated in ${SPEC} (SEP-2577)`,
     fixHint: "integrate directly with an LLM provider API instead of MCP Sampling",
   },
   {
@@ -60,7 +60,7 @@ const REPO_MATCH_RULES: RepoRuleSpec[] = [
     category: "roots",
     severity: "warn",
     title: "uses deprecated Roots",
-    message: (c) => `source references roots/list (${matchStr(c)}); Roots is deprecated in ${RC} (SEP-2577)`,
+    message: (c) => `source references roots/list (${matchStr(c)}); Roots is deprecated in ${SPEC} (SEP-2577)`,
     fixHint: "pass directories or files via tool parameters, resource URIs, or server configuration",
   },
   {
@@ -68,7 +68,7 @@ const REPO_MATCH_RULES: RepoRuleSpec[] = [
     category: "sse-resume",
     severity: "info",
     title: "relies on removed SSE resumability",
-    message: (c) => `source references Last-Event-ID/resumability (${matchStr(c)}); stream resumability is removed in ${RC}`,
+    message: (c) => `source references Last-Event-ID/resumability (${matchStr(c)}); stream resumability is removed in ${SPEC}`,
     fixHint: "persist cross-call state behind server-minted handles passed as tool arguments",
   },
   {
@@ -76,7 +76,7 @@ const REPO_MATCH_RULES: RepoRuleSpec[] = [
     category: "elicitation",
     severity: "warn",
     title: "uses legacy elicitation",
-    message: (c) => `source references elicitation/create (${matchStr(c)}); replaced in ${RC} by MRTR results (resultType "input_required" with inputRequests)`,
+    message: (c) => `source references elicitation/create (${matchStr(c)}); replaced in ${SPEC} by MRTR results (resultType "input_required" with inputRequests)`,
     fixHint: "return input_required results and correlate retries via requestState (SEP-2322)",
   },
   {
@@ -84,21 +84,21 @@ const REPO_MATCH_RULES: RepoRuleSpec[] = [
     category: "session-state",
     severity: "info",
     title: "possible in-process session state",
-    message: (c) => `source shows session-state patterns (${matchStr(c)}); ${RC} statelessness expects server-minted handles passed via tool arguments`,
+    message: (c) => `source shows session-state patterns (${matchStr(c)}); ${SPEC} statelessness expects server-minted handles passed via tool arguments`,
   },
   {
     id: "E114",
     category: "ping",
     severity: "info",
     title: "uses removed ping",
-    message: (c) => `source references the ping utility (${matchStr(c)}); ping is removed in ${RC}`,
+    message: (c) => `source references the ping utility (${matchStr(c)}); ping is removed in ${SPEC}`,
   },
   {
     id: "E115",
     category: "subscribe",
     severity: "info",
     title: "uses replaced resource subscriptions",
-    message: (c) => `source references resources/subscribe (${matchStr(c)}); replaced by subscriptions/listen in ${RC}`,
+    message: (c) => `source references resources/subscribe (${matchStr(c)}); replaced by subscriptions/listen in ${SPEC}`,
   },
 ];
 
@@ -132,11 +132,15 @@ const e101: McpRule = {
         ruleId: "E101",
         severity: "warn",
         title: "legacy SDK generation",
-        message: `depends on ${s.package}${s.range ? `@${s.range}` : ""} (pre-${RC} line)`,
+        message: `depends on ${s.package}${s.range ? `@${s.range}` : ""} (pre-${SPEC} line)`,
         detail:
           s.language === "ts"
-            ? `the ${RC} revision ships as the new @modelcontextprotocol/server package (2.x beta since 2026-07)`
-            : `the ${RC} revision ships as mcp 2.x (pre-releases on PyPI since 2026-06)`,
+            ? // No maturity label here on purpose. This said "2.x beta since
+              // 2026-07" and stayed saying it after both packages cut 2.0.0 on
+              // 2026-07-27, which told people to migrate onto a beta that was
+              // not one. The package name and major line are the durable facts.
+              `the ${SPEC} revision ships as the new @modelcontextprotocol/server package (2.x)`
+            : `the ${SPEC} revision ships as mcp 2.x on PyPI`,
         fixHint: "upgrade to the 2.x SDK line to get stateless transport and MRTR support",
       });
     }
@@ -155,7 +159,7 @@ const e104: McpRule = {
           ruleId: "E104",
           severity: "warn",
           title: "uses deprecated MCP Logging",
-          message: `server declares the logging capability; MCP Logging is deprecated in ${RC} (SEP-2577) and logging/setLevel is removed`,
+          message: `server declares the logging capability; MCP Logging is deprecated in ${SPEC} (SEP-2577) and logging/setLevel is removed`,
           fixHint: "log to stderr (stdio) or use OpenTelemetry; per-request level arrives via _meta io.modelcontextprotocol/logLevel",
         },
       ];
@@ -164,7 +168,7 @@ const e104: McpRule = {
       ruleId: "E104",
       severity: "warn",
       title: "uses deprecated MCP Logging",
-      message: `source references MCP logging APIs (${matchStr(count)}); deprecated in ${RC} (SEP-2577)`,
+      message: `source references MCP logging APIs (${matchStr(count)}); deprecated in ${SPEC} (SEP-2577)`,
       detail,
       fixHint: "log to stderr (stdio) or use OpenTelemetry",
     }));
@@ -185,7 +189,7 @@ const e105: McpRule = {
           severity: "warn",
           title: "requires the removed initialize handshake",
           message: `the server rejected a bare stateless tools/list as not initialized (${bare.errorMessage ?? `code ${bare.errorCode}`})`,
-          detail: `${RC} removes initialize and sessions; stateless servers answer bare requests carrying version info in _meta. Whether an answering server is fully ${RC}-conformant is judged separately (E107 resultType, E118 cache fields, E106 server/discover).`,
+          detail: `${SPEC} removes initialize and sessions; stateless servers answer bare requests carrying version info in _meta. Whether an answering server is fully ${SPEC}-conformant is judged separately (E107 resultType, E118 cache fields, E106 server/discover).`,
           fixHint: "upgrade to a 2.x SDK, or accept requests without a prior initialize",
         },
       ];
@@ -218,7 +222,7 @@ const e106: McpRule = {
         severity: "warn",
         title: "server/discover not implemented",
         message: `server/discover is not implemented (${d.errorMessage ?? "method not found"})`,
-        detail: `${RC} servers MUST implement server/discover (SEP-2575) to advertise versions, capabilities, and identity; clients also use it as the back-compat probe.`,
+        detail: `${SPEC} servers MUST implement server/discover (SEP-2575) to advertise versions, capabilities, and identity; clients also use it as the back-compat probe.`,
         fixHint: "the 2.x SDKs implement server/discover for you",
       },
     ];
@@ -236,8 +240,8 @@ const e107: McpRule = {
         ruleId: "E107",
         severity: "info",
         title: "results missing resultType",
-        message: `results do not carry the resultType field required in ${RC} ("complete" | "input_required")`,
-        detail: `${RC} requires resultType on every result (SEP-2322); on list results the value must be "complete". ${RC} clients treat missing resultType from earlier-protocol servers as "complete", so this is informational until you upgrade.`,
+        message: `results do not carry the resultType field required in ${SPEC} ("complete" | "input_required")`,
+        detail: `${SPEC} requires resultType on every result (SEP-2322); on list results the value must be "complete". ${SPEC} clients treat missing resultType from earlier-protocol servers as "complete", so this is informational until you upgrade.`,
       },
     ];
   },
@@ -367,7 +371,7 @@ const e118: McpRule = {
         ruleId: "E118",
         severity: "warn",
         title: "missing cache fields (ttlMs, cacheScope)",
-        message: `${subject} ttlMs and/or cacheScope, which ${RC} requires on list and resource-read results (SEP-2549, CacheableResult)`,
+        message: `${subject} ttlMs and/or cacheScope, which ${SPEC} requires on list and resource-read results (SEP-2549, CacheableResult)`,
         detail: "required on tools/list, prompts/list, resources/list, resources/read, resources/templates/list, and server/discover; cacheScope is \"public\" or \"private\"",
         fixHint: "return ttlMs and cacheScope on these results so clients can cache and stop polling; the 2.x SDKs add them for you",
       },

@@ -7,7 +7,7 @@ import { VERSION } from "./version.js";
 import { resolveTarget, type ResolvedTarget } from "./targets/resolve.js";
 import { loadClientServers, SUPPORTED_CLIENTS } from "./targets/clientConfigs.js";
 import { introspectServer } from "./clients/introspect.js";
-import { RC_VERSION } from "./clients/rawprobe.js";
+import { SPEC_VERSION } from "./clients/rawprobe.js";
 import { weighServer, weighSkills } from "./weigh/weigh.js";
 import { findSkills } from "./skills/parse.js";
 import { diffServerWeigh } from "./weigh/diff.js";
@@ -398,7 +398,7 @@ program
           "--url",
           target.url,
           "--spec-version",
-          RC_VERSION,
+          SPEC_VERSION,
         ];
         console.error(pc.dim(`\nrunning official MCP conformance suite:\n  npx ${args.slice(1).join(" ")}\n`));
         // cross-spawn resolves npx(.cmd) without a shell, so target.url is passed

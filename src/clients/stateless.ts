@@ -1,6 +1,6 @@
 import type { ServerIntrospection, ToolDef } from "../core/types.js";
 import type { ResolvedTarget } from "../targets/resolve.js";
-import { RC_VERSION, rcMeta, postMessage, StdioSession } from "./rawprobe.js";
+import { SPEC_VERSION, specMeta, postMessage, StdioSession } from "./rawprobe.js";
 
 /**
  * 2026-07-28 introspection path: bare stateless requests, no initialize.
@@ -70,7 +70,7 @@ async function statelessStdio(
     let rawFirst: unknown;
     let cursor: string | undefined;
     for (let page = 0; page < MAX_PAGES; page++) {
-      const params = cursor ? { ...rcMeta(), cursor } : rcMeta();
+      const params = cursor ? { ...specMeta(), cursor } : specMeta();
       const reply = await session.request("tools/list", params, budget);
       if (!reply.result) {
         if (page === 0) return undefined; // no bare answer: not a stateless server
@@ -81,7 +81,7 @@ async function statelessStdio(
       cursor = (reply.result as { nextCursor?: string }).nextCursor;
       if (!cursor) break;
     }
-    const discover = await session.request("server/discover", rcMeta(), Math.min(budget, 10000));
+    const discover = await session.request("server/discover", specMeta(), Math.min(budget, 10000));
     return buildIntrospection(target.label, "stdio", undefined, pages, rawFirst, discover.result);
   } finally {
     session.kill();
@@ -95,13 +95,13 @@ async function statelessHttp(
   let rawFirst: unknown;
   let cursor: string | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
-    const params = cursor ? { ...rcMeta(), cursor } : rcMeta();
+    const params = cursor ? { ...specMeta(), cursor } : specMeta();
     const reply = await postMessage(
       target.url,
       target.headers,
       { jsonrpc: "2.0", id: 100 + page, method: "tools/list", params },
       undefined,
-      RC_VERSION,
+      SPEC_VERSION,
     );
     const result = reply.body?.result;
     if (!result) {
@@ -116,9 +116,9 @@ async function statelessHttp(
   const discover = await postMessage(
     target.url,
     target.headers,
-    { jsonrpc: "2.0", id: 99, method: "server/discover", params: rcMeta() },
+    { jsonrpc: "2.0", id: 99, method: "server/discover", params: specMeta() },
     undefined,
-    RC_VERSION,
+    SPEC_VERSION,
   ).catch(() => undefined);
   return buildIntrospection(target.label, "http", "streamable", pages, rawFirst, discover?.body?.result);
 }
@@ -162,7 +162,7 @@ function buildIntrospection(
     transport,
     httpTransport,
     serverInfo: discoverIdentity(discover),
-    protocolVersion: discover?.supportedVersions?.includes(RC_VERSION) ? RC_VERSION : undefined,
+    protocolVersion: discover?.supportedVersions?.includes(SPEC_VERSION) ? SPEC_VERSION : undefined,
     instructions: discover?.instructions,
     capabilities: caps,
     tools,

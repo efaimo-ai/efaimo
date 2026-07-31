@@ -13,7 +13,14 @@ import { VERSION } from "../version.js";
  * Every probe fails soft into a { skipped } marker.
  */
 
-export const RC_VERSION = "2026-07-28";
+/**
+ * The MCP revision efaimo audits against. It was called RC_VERSION until
+ * 2026-08-01, by which point the revision had been published for four days and
+ * the name had been lying for all of them. scripts/spec-drift.mjs reads this
+ * declaration by name, so renaming it again means updating that regex, which
+ * fails loudly rather than silently watching nothing.
+ */
+export const SPEC_VERSION = "2026-07-28";
 const LEGACY_VERSION = "2025-06-18";
 
 interface RpcReply {
@@ -23,10 +30,10 @@ interface RpcReply {
   procExit?: number | null;
 }
 
-export function rcMeta(): Record<string, unknown> {
+export function specMeta(): Record<string, unknown> {
   return {
     _meta: {
-      "io.modelcontextprotocol/protocolVersion": RC_VERSION,
+      "io.modelcontextprotocol/protocolVersion": SPEC_VERSION,
       "io.modelcontextprotocol/clientCapabilities": {},
     },
   };
@@ -216,14 +223,69 @@ function hasCacheFields(result: object): boolean {
   );
 }
 
+/** JSON-RPC's own "no such method", unchanged by the 2026-07-28 revision. */
+const METHOD_NOT_FOUND = -32601;
+
+/**
+ * One reading of a server/discover answer, because there are three call sites
+ * (stdio, the bare stateless HTTP path, the legacy HTTP path) and they had
+ * already drifted: the same four branches were spelled three ways, and only
+ * two of them handled a reply that carried neither a result nor an error.
+ *
+ * Returns undefined when there is nothing to read, so each caller keeps its own
+ * fallback: stdio calls that "no answer", while the bare HTTP path deliberately
+ * leaves the verdict unset so the legacy branch can still try after initialize.
+ */
+function classifyDiscover(
+  reply: { result?: Record<string, unknown>; error?: { code: number; message: string } } | undefined,
+): { verdict: NonNullable<ProbeResults["serverDiscover"]>; cacheFields?: boolean } | undefined {
+  if (reply?.result) return { verdict: { supported: true }, cacheFields: hasCacheFields(reply.result) };
+  if (reply?.error) {
+    const detail = `${reply.error.code} ${reply.error.message}`;
+    return reply.error.code === METHOD_NOT_FOUND
+      ? { verdict: { supported: false, errorMessage: detail } }
+      : { verdict: { skipped: `inconclusive (${detail})` } };
+  }
+  return undefined;
+}
+
 function toolOrder(result: unknown): string[] {
   const tools = (result as { tools?: { name?: string }[] } | null)?.tools ?? [];
   return tools.map((x) => x?.name).filter((n): n is string => typeof n === "string");
 }
 
+/**
+ * Kills every spawned server on the way out, including when a probe throws.
+ *
+ * The body below used to run its cleanup only on the happy path, and the
+ * consequence was worse than a leaked process: with no kill(), the child's
+ * stdin is never closed, so it never sees EOF and never exits, and its stdio
+ * handles keep THIS process's event loop alive. runProbes catches the throw and
+ * the report still prints, and then the CLI hangs forever having already said
+ * everything it had to say. Measured: killed at 30s with the cleanup removed,
+ * 664ms clean exit with it.
+ *
+ * statelessStdio next door already had this try/finally; this is the same
+ * pattern in the file that was missing it. kill() is idempotent, so the early
+ * kills inside still free each server as soon as it is done rather than holding
+ * them all open until the end.
+ */
 async function probeStdio(
   target: Extract<ResolvedTarget, { kind: "stdio" }>,
   budget: number,
+): Promise<ProbeResults> {
+  const sessions: StdioSession[] = [];
+  try {
+    return await probeStdioSessions(target, budget, sessions);
+  } finally {
+    for (const s of sessions) s.kill();
+  }
+}
+
+async function probeStdioSessions(
+  target: Extract<ResolvedTarget, { kind: "stdio" }>,
+  budget: number,
+  sessions: StdioSession[],
 ): Promise<ProbeResults> {
   const results: ProbeResults = {};
   // A responsive server answers the bare request in well under a second, so a
@@ -232,14 +294,13 @@ async function probeStdio(
   // honored rather than floored.
   const bareT = Math.min(Math.max(budget, 1), 15000);
   const discoverT = Math.min(Math.max(budget, 1), 10000);
-  const sessions: StdioSession[] = [];
 
   // A bare stateless tools/list. BOTH legacy (the reference SDK has no init gate)
   // and RC servers answer it, so RC vs legacy is decided by the RESULT shape
   // (resultType, cache fields, server/discover), never by whether it answered.
   const s1 = new StdioSession(target.command, target.args, target.env);
   sessions.push(s1);
-  const bare = await s1.request("tools/list", rcMeta(), bareT);
+  const bare = await s1.request("tools/list", specMeta(), bareT);
   const bareOutcome = toOutcome(
     bare,
     `no response within ${Math.round(bareT / 1000)}s (the server may require the removed initialize handshake)`,
@@ -256,17 +317,9 @@ async function probeStdio(
   // Probe server/discover only if the server is responsive (answered or errored,
   // not timed out), to avoid a second long wait on an unresponsive server.
   if (!s1.exited && bareOutcome.kind !== "timeout") {
-    const d = await s1.request("server/discover", rcMeta(), discoverT);
-    if (d.result) {
-      results.serverDiscover = { supported: true };
-      results.discoverCacheFieldsPresent = hasCacheFields(d.result);
-    } else if (d.error && d.error.code === -32601) {
-      results.serverDiscover = { supported: false, errorMessage: `${d.error.code} ${d.error.message}` };
-    } else if (d.error) {
-      results.serverDiscover = { skipped: `inconclusive (${d.error.code} ${d.error.message})` };
-    } else {
-      results.serverDiscover = { skipped: "no answer to server/discover" };
-    }
+    const d = classifyDiscover(await s1.request("server/discover", specMeta(), discoverT));
+    results.serverDiscover = d?.verdict ?? { skipped: "no answer to server/discover" };
+    if (d?.cacheFields !== undefined) results.discoverCacheFieldsPresent = d.cacheFields;
   } else {
     results.serverDiscover = { skipped: "server did not answer the bare request" };
   }
@@ -276,7 +329,7 @@ async function probeStdio(
   if (order1 && order1.length > 1) {
     const s2 = new StdioSession(target.command, target.args, target.env);
     sessions.push(s2);
-    const bare2 = await s2.request("tools/list", rcMeta(), bareT);
+    const bare2 = await s2.request("tools/list", specMeta(), bareT);
     s2.kill();
     if (bare2.result) {
       const order2 = toolOrder(bare2.result);
@@ -506,9 +559,9 @@ async function probeHttp(
   const bare = await postMessage(
     url,
     headers,
-    { jsonrpc: "2.0", id: 1, method: "tools/list", params: rcMeta() },
+    { jsonrpc: "2.0", id: 1, method: "tools/list", params: specMeta() },
     undefined,
-    RC_VERSION,
+    SPEC_VERSION,
   ).catch(
     (e) => ({ status: 0, headers: new Headers(), authHeader: undefined, body: undefined, error: e as Error }) as HttpReply & { error?: Error },
   );
@@ -538,17 +591,17 @@ async function probeHttp(
       const d = await postMessage(
         url,
         headers,
-        { jsonrpc: "2.0", id: 7, method: "server/discover", params: rcMeta() },
+        { jsonrpc: "2.0", id: 7, method: "server/discover", params: specMeta() },
         undefined,
-        RC_VERSION,
+        SPEC_VERSION,
       );
-      if (d.body?.result) {
-        results.serverDiscover = { supported: true };
-        results.discoverCacheFieldsPresent = hasCacheFields(d.body.result);
-      } else if (d.body?.error && d.body.error.code === -32601) {
-        results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
-      } else if (d.body?.error) {
-        results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };
+      // No fallback verdict on purpose: a reply carrying neither result nor
+      // error leaves serverDiscover unset so the legacy branch below can still
+      // ask, after initialize.
+      const c = classifyDiscover(d.body);
+      if (c) {
+        results.serverDiscover = c.verdict;
+        if (c.cacheFields !== undefined) results.discoverCacheFieldsPresent = c.cacheFields;
       }
     } catch {
       /* leave for the legacy branch to try */
@@ -560,9 +613,9 @@ async function probeHttp(
         const again = await postMessage(
           url,
           headers,
-          { jsonrpc: "2.0", id: 8, method: "tools/list", params: rcMeta() },
+          { jsonrpc: "2.0", id: 8, method: "tools/list", params: specMeta() },
           undefined,
-          RC_VERSION,
+          SPEC_VERSION,
         );
         const order2 = toolOrder(again.body?.result);
         if (order2.length) results.toolsOrderDeterministic = arraysEqual(bareTools, order2);
@@ -599,16 +652,11 @@ async function probeHttp(
         }
         if (results.serverDiscover === undefined) {
           const d = await postMessage(url, headers, { jsonrpc: "2.0", id: 4, method: "server/discover", params: {} }, sessionId);
-          if (d.body?.result) {
-            results.serverDiscover = { supported: true };
-            // ??= for the same reason as the two lines above: never clobber a
-            // measurement the bare stateless path already took.
-            results.discoverCacheFieldsPresent ??= hasCacheFields(d.body.result);
-          } else if (d.body?.error && d.body.error.code === -32601) {
-            results.serverDiscover = { supported: false, errorMessage: `${d.body.error.code} ${d.body.error.message}` };
-          } else if (d.body?.error) {
-            results.serverDiscover = { skipped: `inconclusive (${d.body.error.code} ${d.body.error.message})` };
-          } else results.serverDiscover = { skipped: "no answer to server/discover" };
+          const c = classifyDiscover(d.body);
+          results.serverDiscover = c?.verdict ?? { skipped: "no answer to server/discover" };
+          // ??= for the same reason as the resultType/cacheFields lines above:
+          // never clobber a measurement the bare stateless path already took.
+          if (c?.cacheFields !== undefined) results.discoverCacheFieldsPresent ??= c.cacheFields;
         }
 
         if (order1 && order1.length > 1 && results.toolsOrderDeterministic === undefined) {
