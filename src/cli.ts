@@ -296,6 +296,7 @@ program
   .option("--repo <path>", "additionally scan this source repo for deprecated API usage")
   .option("--no-probe", "skip live readiness probes (bare request, server/discover, ordering)")
   .option("--strict", "exit 1 on warnings too")
+  .option("--strict-readiness", "exit 1 if the 2026-07-28 migration diff is not clean (never changes the grade)")
   .option("--conformance", "after the audit, run the official MCP conformance suite (http targets)")
   .option("--header <header>", 'HTTP header "Key: Value" (repeatable)', collectPairs(":"))
   .option("--env <pair>", "KEY=VALUE for stdio servers (repeatable)", collectPairs("="))
@@ -312,6 +313,7 @@ program
     repo?: string;
     probe?: boolean;
     strict?: boolean;
+    strictReadiness?: boolean;
     conformance?: boolean;
     badge?: string | boolean;
     anthropic?: string | boolean;
@@ -411,6 +413,15 @@ program
     }
 
     if (report.counts.error > 0 || (opts.strict && report.counts.warn > 0)) {
+      process.exitCode = 1;
+    }
+    // Readiness stays out of the grade, the badge and the default exit code
+    // (ADR-014, reaffirmed in ADR-027). But a team that HAS migrated had no way
+    // to stay migrated: --strict covers quality only, so nothing in CI could
+    // catch a regression back onto the legacy handshake. This is the opt-in for
+    // exactly that, and it moves the exit code only. Nobody's grade changes,
+    // no published number moves, and the operator decides rather than us.
+    if (opts.strictReadiness && (report.readiness?.findings.length ?? 0) > 0) {
       process.exitCode = 1;
     }
   });

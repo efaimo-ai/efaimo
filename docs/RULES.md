@@ -9,12 +9,14 @@ Grade starts at 100; each error costs 15, each warning 5, each info 1.
 MCP checks split into **2026-07-28 readiness** (E101-E118) and **quality**
 (E121-E130); skill checks are S1xx. **Only quality and skill findings are
 graded.** Readiness findings are reported as a separate, ungraded **migration
-diff**: the stateless revision they target published on 2026-07-28, and a
-migration you have not made yet is a to-do, not a defect in what you shipped.
-Readiness severities still order the diff by urgency, but the diff never affects
-the grade, the badge, or the exit code (including `--strict`). Now that the spec
-has published, expect readiness to start counting in a minor release.
-Source-pattern rules are heuristics and say so in their detail line.
+diff**: the two answer different questions. The grade is what a model
+experiences from this tool surface; readiness is whether a 2026-07-28 client can
+talk to this server. Combining them scored the official reference server a C(79)
+for a tool surface that is an A(95), which is why they are two numbers printed
+next to each other rather than one. Readiness severities still order the diff by
+urgency, but the diff never affects the grade or the badge, and never affects
+the exit code unless you ask for it with `--strict-readiness`. Source-pattern
+rules are heuristics and say so in their detail line.
 
 ## MCP readiness (E101-E118)
 

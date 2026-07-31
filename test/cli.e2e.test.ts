@@ -98,4 +98,36 @@ describe.skipIf(!built)("cli e2e (built dist)", () => {
     expect(r.code).toBe(2);
     expect(r.err).toMatch(/--window/);
   });
+
+  // Readiness never moves the grade or the default exit code (ADR-014/027), so
+  // a team that had migrated had no way to stay migrated. --strict-readiness is
+  // the opt-in, and it must move the exit code WITHOUT moving the grade.
+  describe("--strict-readiness", () => {
+    const MCP = path.join(here, "fixtures", "mcp-server");
+    const legacy = "node " + path.join(MCP, "server.mjs");
+    const conformant = "node " + path.join(MCP, "server-rc.mjs");
+
+    it("stays quiet by default on a server with items to migrate", () => {
+      const r = run(["check", "--mcp", legacy, "--timeout", "20"]);
+      expect(r.code).toBe(0);
+    });
+
+    it("exits 1 on the same server when asked to", () => {
+      const r = run(["check", "--mcp", legacy, "--strict-readiness", "--timeout", "20"]);
+      expect(r.code).toBe(1);
+    });
+
+    it("exits 0 on a conformant server, so it is usable as a CI gate", () => {
+      const r = run(["check", "--mcp", conformant, "--strict-readiness", "--timeout", "20"]);
+      expect(r.code).toBe(0);
+    });
+
+    it("moves the exit code without moving the grade", () => {
+      const plain = run(["check", "--mcp", legacy, "--timeout", "20"]);
+      const strict = run(["check", "--mcp", legacy, "--strict-readiness", "--timeout", "20"]);
+      const grade = (s: string) => s.match(/grade\s+(\S+\s+\(\d+\))/)?.[1];
+      expect(grade(strict.out)).toBe(grade(plain.out));
+      expect(grade(strict.out)).toBeTruthy();
+    });
+  });
 });

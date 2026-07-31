@@ -131,8 +131,11 @@ descriptions, schemas, annotations, tool count, token cost. Second, an ungraded
 `initialize` and sessions, deprecates Sampling, Roots, and Logging, and requires
 `server/discover`, `resultType`, and cache fields): exactly what will break and
 how to fix it, each rule naming the SEP it came from. Readiness never drags the
-grade; a migration you have not made yet is a to-do list, not a defect in what
-you shipped. Full list: [docs/RULES.md](./docs/RULES.md).
+grade, because the two answer different questions: the grade is what a model
+experiences from this tool surface, readiness is whether a 2026-07-28 client can
+talk to this server. Combining them scored the reference server a C for a tool
+surface that is an A. Pass `--strict-readiness` when you want CI to fail on the
+diff. Full list: [docs/RULES.md](./docs/RULES.md).
 
 <p align="center">
   <img src="assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
@@ -285,8 +288,9 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 | **E121 to E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
 
 Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
-findings (E101-E118) are reported as an ungraded migration diff. Every finding
-carries a stable id you can suppress or link. See
+findings (E101-E118) are reported as an ungraded migration diff, which
+`--strict-readiness` can turn into a non-zero exit without touching the grade.
+Every finding carries a stable id you can suppress or link. See
 [docs/RULES.md](./docs/RULES.md).
 
 ## Roadmap
@@ -294,8 +298,9 @@ carries a stable id you can suppress or link. See
 - Harden `efaimo test`: a separately chosen judge model, confidence intervals on
   the delta, multi-turn tool-use trials, and judge calibration, so the
   experimental harness earns unqualified trust.
-- The 2026-07-28 spec published on schedule; start counting readiness toward the
-  grade in a minor release (today it is an ungraded migration diff on purpose).
+- Readiness rules for the two 2026-07-28 changes that have none yet: the
+  `Mcp-Method` / `Mcp-Name` request headers (SEP-2243), and Tasks moving out of
+  core into the `io.modelcontextprotocol/tasks` extension (SEP-2663).
 - A public, continuously updated Agent Skills Quality Index over a broad corpus.
 
 ## Stability

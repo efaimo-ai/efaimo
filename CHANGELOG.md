@@ -13,6 +13,11 @@ became cacheable, and three error codes were renumbered.
 
 ### Added
 
+- `check --strict-readiness`: exit non-zero when the 2026-07-28 migration diff
+  is not clean. Readiness still never touches the grade or the badge, and the
+  default exit code is unchanged. It exists because a team that had finished
+  migrating had no way to stay migrated: `--strict` covers quality only, so
+  nothing in CI could catch a regression back onto the legacy handshake.
 - `npm run spec:drift`, plus a daily `spec-drift` workflow: fails when an MCP
   revision newer than the one efaimo targets publishes, or when the targeted
   revision changes under its own tag. The 2026-07-28 publication went unnoticed
