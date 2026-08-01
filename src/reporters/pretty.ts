@@ -106,9 +106,10 @@ export function renderTestReportPretty(r: TestReport): string {
     `test  ${paint(pc.bold, r.scenario)}`,
     `skill ${r.skill}   model ${r.model}`,
     "",
-    `  with skill     ${r.withSkill.passes}/${r.withSkill.trials} pass  (${r.withSkill.passRate.toFixed(0)}%)`,
-    `  without skill  ${r.withoutSkill.passes}/${r.withoutSkill.trials} pass  (${r.withoutSkill.passRate.toFixed(0)}%)`,
+    `  with skill     ${r.withSkill.passes}/${r.withSkill.scored} pass  (${r.withSkill.passRate.toFixed(0)}%)`,
+    `  without skill  ${r.withoutSkill.passes}/${r.withoutSkill.scored} pass  (${r.withoutSkill.passRate.toFixed(0)}%)`,
     `  delta          ${paint(pc.bold, `${sign}${r.deltaPoints} points`)}   ${paint(verdictColor, r.verdict)}`,
+    `  significance   p = ${r.p < 0.0001 ? "<0.0001" : r.p.toFixed(4)}   95% CI ${r.ci.lo >= 0 ? "+" : ""}${r.ci.lo} to ${r.ci.hi >= 0 ? "+" : ""}${r.ci.hi} points`,
     "",
   ];
   for (const n of r.notes) lines.push(paint(pc.dim, `note: ${safeText(n)}`));

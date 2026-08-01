@@ -15,6 +15,8 @@ export function anthropicRunner(apiKey: string): Runner {
       },
       body: JSON.stringify({
         model: req.model,
+        // 0 for the judge, 1 for the subject. See RunnerRequest.deterministic.
+        temperature: req.deterministic ? 0 : 1,
         max_tokens: 1024,
         ...(req.system ? { system: req.system } : {}),
         messages: [{ role: "user", content: req.user }],

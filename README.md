@@ -103,9 +103,19 @@ test  contoso-crm-import helps on an unknowable format
 </details>
 
 The first is pure context overhead, the second earns its tokens, and only the
-trial data tells them apart. Experimental and probabilistic: raise the trial
-count for confidence, and treat small deltas as noise. It is opt-in because a
-live run spends tokens on your key. See
+trial data tells them apart.
+
+The verdict is a significance test, not a threshold on the gap. Every run
+reports a two-sided Fisher exact `p` and a 95% interval on the delta, and
+`helps` / `hurts` require `p < 0.05`; anything else is `no measurable effect`
+no matter how large the gap looks. That matters more than it sounds: at the
+old default of 5 trials per arm, 5/5 against 4/5 is +20 points and a `p` of
+exactly 1.0000, and the previous rule called it `helps`. The `+100` run above
+is `p = 0.0002`; a `+25` run at 8 trials per arm is `p = 0.47` and now says so.
+The default is 20 trials per arm, because below about that a partial result
+cannot reach significance at all.
+
+It is opt-in because a live run spends tokens on your key. See
 [examples/scenario.example.yaml](./examples/scenario.example.yaml) and
 [examples/scenario.crm.yaml](./examples/scenario.crm.yaml).
 

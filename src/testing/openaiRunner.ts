@@ -15,7 +15,14 @@ export function openaiRunner(apiKey: string): Runner {
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ model: req.model, messages, max_completion_tokens: 1024 }),
+      // temperature: 0 for the judge, 1 for the subject. See
+      // RunnerRequest.deterministic in harness.ts.
+      body: JSON.stringify({
+        model: req.model,
+        temperature: req.deterministic ? 0 : 1,
+        messages,
+        max_completion_tokens: 1024,
+      }),
       redirect: "error",
       signal: AbortSignal.timeout(60000),
     });
