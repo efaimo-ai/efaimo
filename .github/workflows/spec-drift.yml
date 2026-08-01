@@ -26,6 +26,8 @@ on:
 jobs:
   drift:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,3 +38,9 @@ jobs:
       # build is broken. A drift check that needs a green build is unavailable
       # exactly when you are mid-migration and need it most.
       - run: node scripts/spec-drift.mjs
+        env:
+          # Unauthenticated api.github.com is 60 requests/hour per IP and
+          # Actions runners share egress addresses, so without this the daily
+          # run goes red on other people's traffic. A check that cries wolf is
+          # one you stop reading, and this one has to survive being ignored.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

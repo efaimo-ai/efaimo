@@ -49,7 +49,21 @@ async function main() {
   }
   console.log(`efaimo targets MCP ${target}\n`);
 
-  const ua = { "User-Agent": "efaimo-spec-drift", Accept: "application/vnd.github+json" };
+  // Authenticate the API call when a token is around. Unauthenticated
+  // api.github.com allows 60 requests/hour PER IP and Actions runners share
+  // egress addresses, so a scheduled job that asks anonymously eventually goes
+  // red on somebody else's traffic. The script handles that correctly (drift
+  // UNKNOWN, not absent) but the noise is the problem: this check exists to
+  // reach a founder who is away, and one that cries wolf is one you stop
+  // reading, which is how the four day gap happened in the first place.
+  // Optional, so a local run with no token still works. Only this call is
+  // authenticated; the schema fetch below is a CDN and wants no credential.
+  const token = process.env.GITHUB_TOKEN;
+  const ua = {
+    "User-Agent": "efaimo-spec-drift",
+    Accept: "application/vnd.github+json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 
   // --- 1. a newer published revision ---------------------------------------
   let releases;
