@@ -16,7 +16,7 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 
 - **97% score an A**, but **3% carry at least one error-level finding**.
 - The **median skill's instructions are ~1,632 tokens** (the spec recommends staying under 5,000), loaded whenever the skill triggers.
-- Median always-on metadata: ~39 tokens per skill, loaded at session start for every installed skill.
+- Median always-on metadata: ~38.5 tokens per skill, loaded at session start for every installed skill.
 
 ## Grade distribution
 
@@ -106,7 +106,8 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 
 | skill | grade | metadata | body | referenced |
 |---|---|---|---|---|
-| `efaimo` | A (100) | 58 | 626 | 0 files, 0 |
-| `mcp-stateless-migration` | A (100) | 104 | 1,397 | 3 files, 3,305 |
+| `efaimo` | A (100) | 58 | 813 | 0 files, 0 |
+| `mcp-stateless-migration` | A (100) | 104 | 1,397 | 3 files, 3,685 |
+| `claim-sweep` | A (100) | 110 | 1,115 | 2 files, 2,581 |
 
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>
