@@ -37,6 +37,20 @@ if (!corpus) {
   console.error("usage: node scripts/skills-index.mjs <corpus-dir> [out.md] [--json <out.json>] [--ours <dir>]...");
   process.exit(2);
 }
+// A flag given without a path is an error, not a default. `--json` with the
+// path forgotten used to fall back to REPORT.json, so the site's measurement
+// was never overwritten and every gate downstream still passed: the stale file
+// it did not touch was internally consistent with itself. The only thing wrong
+// was the operator's belief that they had refreshed the site, and nothing in
+// the pipeline could see that. A dropped --ours path narrows what gets graded
+// the same silent way.
+const dangling = ["--json", "--ours"].find((f) =>
+  argv.some((a, i) => a === f && (!argv[i + 1] || argv[i + 1].startsWith("--"))),
+);
+if (dangling) {
+  console.error(`${dangling} needs a path`);
+  process.exit(2);
+}
 
 let manifest;
 try {
@@ -88,6 +102,17 @@ async function gradeDir(dir, source) {
 }
 
 const dirs = skillDirs(corpus);
+// Empty harvest is a failure, never a written file. skillDirs walks with a
+// try/continue, so a corpus path that does not exist returns nothing rather
+// than throwing, and this used to write a report of 0 skills, a JSON of 0 rows,
+// and print "wrote ... 0 skills" as though it had worked. That JSON is what the
+// site renders: overwriting a real measurement with an empty one and calling it
+// success is the exact shape this repo keeps paying for.
+if (!dirs.length) {
+  console.error(`no SKILL.md found under ${corpus}; nothing was measured, so nothing is written`);
+  process.exit(2);
+}
+
 const rows = [];
 for (const dir of dirs) {
   rows.push(await gradeDir(dir, path.relative(corpus, dir).split(path.sep)[0]));
@@ -100,6 +125,12 @@ for (const dir of ourDirs) ours.push(await gradeDir(dir, "efaimo"));
 
 const ok = rows.filter((r) => !r.error);
 const n = ok.length;
+// Same rule one step later: finding the files but grading none of them is also
+// a measurement of nothing.
+if (!n) {
+  console.error(`found ${rows.length} skills under ${corpus} but graded none of them; refusing to write an empty measurement`);
+  process.exit(2);
+}
 const dist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
 for (const r of ok) dist[r.grade.letter]++;
 const withErrors = ok.filter((r) => r.counts.error > 0).length;
