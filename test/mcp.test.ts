@@ -65,9 +65,21 @@ describe("mcp introspection + rules (live fixture server)", () => {
 
   it("grades quality only; readiness is an ungraded migration diff", async () => {
     const res = await checkMcpTarget(target(), { timeoutMs: 15000, probe: true });
-    // Quality findings on the fixture: E121 + E122 + E123 warns = -15 -> B (85).
-    expect(res.report.grade.score).toBe(85);
+    // Quality findings on the fixture: E121 + E122 warns (-5 each) and E123
+    // info (-1) = -11 off 95 -> B (84).
+    //
+    // This asserted 85 until 2026-08-02, and the missing point is the whole
+    // story. The fixture ships a tool called `delete_everything` with no
+    // destructiveHint, which is exactly what E123 exists to catch, and E123
+    // never fired on it: the matcher was `\b(delete|...)\b` and `_` is a word
+    // character, so there is no boundary inside `delete_everything`. The test
+    // encoded the score the broken rule produced, so both agreed and neither
+    // noticed. E123 is now asserted by id below, so it cannot go quiet again
+    // without a red test rather than a silently higher grade.
+    expect(res.report.grade.score).toBe(84);
     expect(res.report.grade.letter).toBe("B");
+    const qualityIds = new Set(res.report.findings.map((f) => f.ruleId));
+    expect(qualityIds.has("E123")).toBe(true);
     expect(res.report.findings.every((f) => /^E1[23]\d$/.test(f.ruleId))).toBe(true);
     // Readiness findings live in the separate diff, not in the graded set.
     const readinessIds = new Set(res.report.readiness!.findings.map((f) => f.ruleId));

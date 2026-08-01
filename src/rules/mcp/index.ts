@@ -465,7 +465,35 @@ const e122: McpRule = {
   },
 };
 
-const DESTRUCTIVE_NAME_RE = /\b(delete|remove|drop|purge|destroy|overwrite|truncate|erase|wipe|revoke|reset|format|deploy|kill)\b/i;
+// "format" was in this list and is dropped. It only ever meant "format a
+// disk" in the author's head, but `format_date`, `format_output` and
+// `format_json` are among the most common tool names there are, and once the
+// matcher below started working the word turned into pure noise. Nobody could
+// have found that while the rule was firing on nothing.
+const DESTRUCTIVE_WORDS = new Set([
+  "delete", "remove", "drop", "purge", "destroy", "overwrite",
+  "truncate", "erase", "wipe", "revoke", "reset", "deploy", "kill",
+]);
+
+/**
+ * Does this tool name read as destructive?
+ *
+ * This was a single `\b(delete|remove|...)\b` regex, and `_` is a word
+ * character, so `\bdelete\b` has no boundary inside `delete_file` - nor inside
+ * `deleteFile`. Every conventional MCP tool name escaped it: delete_file,
+ * deleteFile, drop_table, removeUser, kill_process, wipe_db all returned
+ * false, while only a bare `delete` or `delete-file` matched. E123 is
+ * documented in docs/RULES.md as catching "a destructive-looking tool lacking
+ * destructiveHint" and it could not fire on essentially any real server.
+ *
+ * Split on separators AND on camelCase boundaries, then test each segment.
+ */
+export function readsDestructive(name: string): boolean {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[^A-Za-z0-9]+/)
+    .some((seg) => DESTRUCTIVE_WORDS.has(seg.toLowerCase()));
+}
 
 const e123: McpRule = {
   id: "E123",
@@ -486,7 +514,7 @@ const e123: McpRule = {
       });
     }
     const risky = tools.filter(
-      (t) => DESTRUCTIVE_NAME_RE.test(t.name) && !(t.annotations && "destructiveHint" in t.annotations),
+      (t) => readsDestructive(t.name) && !(t.annotations && "destructiveHint" in t.annotations),
     );
     for (const t of capList(risky, 5).shown) {
       findings.push({

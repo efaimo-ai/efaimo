@@ -79,7 +79,25 @@ export function parseSkillFile(file: string): SkillInfo {
       if (!cleaned || seen.has(cleaned)) continue;
       seen.add(cleaned);
       const resolved = path.resolve(dir, cleaned);
-      base.referencedPaths.push({ raw: cleaned, resolved, exists: fs.existsSync(resolved), source });
+      // Does this reference stay inside the skill? Absolute paths, URLs and
+      // globs are already rejected above; `../` was not, and weigh.ts then
+      // READ every referenced file to count its tokens. A skill fetched from
+      // anywhere could point at ../../../.ssh/id_rsa and get back an
+      // existence-and-size oracle, published if --md goes to a CI job summary.
+      // S106 already knew this was wrong and warned about it - but only after
+      // the read had happened, and `weigh` does not run S106 at all.
+      //
+      // Recorded here rather than filtered, so S106 can still report it and
+      // the reader still learns the reference exists. weigh skips the read.
+      const rel = path.relative(dir, resolved);
+      const escapes = rel.startsWith("..") || path.isAbsolute(rel);
+      base.referencedPaths.push({
+        raw: cleaned,
+        resolved,
+        exists: fs.existsSync(resolved),
+        escapes,
+        source,
+      });
     }
   }
 

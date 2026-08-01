@@ -15,7 +15,7 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 ## Headline
 
 - **97% score an A**, but **3% carry at least one error-level finding**.
-- The **median skill's instructions are ~1,673 tokens** (the spec recommends staying under 5,000), loaded whenever the skill triggers.
+- The **median skill's instructions are ~1,632 tokens** (the spec recommends staying under 5,000), loaded whenever the skill triggers.
 - Median always-on metadata: ~39 tokens per skill, loaded at session start for every installed skill.
 
 ## Grade distribution

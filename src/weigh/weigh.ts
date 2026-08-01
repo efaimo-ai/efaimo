@@ -87,7 +87,9 @@ export async function weighSkills(set: SkillSet): Promise<SkillSetWeighResult> {
     let refFileTokens = 0;
     let refFileCount = 0;
     for (const ref of skill.referencedPaths) {
-      if (!ref.exists || isBinaryPath(ref.resolved)) continue;
+      // Never read outside the skill root. S106 warns about these, but only
+      // after weigh had already opened the file and counted its tokens.
+      if (ref.escapes || !ref.exists || isBinaryPath(ref.resolved)) continue;
       const text = readTextSafe(ref.resolved);
       if (text === undefined) continue;
       refFileCount++;

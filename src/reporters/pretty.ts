@@ -6,6 +6,7 @@ import type { WeighDiff } from "../weigh/diff.js";
 import { formatWindowShare } from "../weigh/window.js";
 import { sortFindings } from "../core/grade.js";
 import { VERSION } from "../version.js";
+import { safeText } from "../util/safeText.js";
 
 const DOCS_RULES = "https://github.com/efaimo-ai/efaimo/blob/main/docs/RULES.md";
 
@@ -36,17 +37,17 @@ function n(x: number): string {
 }
 
 function renderFinding(lines: string[], f: Finding): void {
-  lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${f.message}`);
+  lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${safeText(f.message)}`);
   if (f.detail) {
-    for (const d of f.detail.split("\n")) lines.push(paint(pc.dim, `          ${d}`));
+    for (const d of safeText(f.detail).split("\n")) lines.push(paint(pc.dim, `          ${d}`));
   }
-  if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${f.fixHint}`));
+  if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${safeText(f.fixHint)}`));
 }
 
 export function renderCheckPretty(report: CheckReport): string {
   const lines: string[] = [];
   lines.push(paint(pc.dim, `efaimo v${VERSION}`));
-  lines.push(`check ${report.surface}  ${paint(pc.bold, report.target)}`);
+  lines.push(`check ${report.surface}  ${paint(pc.bold, safeText(report.target))}`);
   const g = report.grade;
   const qualityLabel = report.readiness ? "quality: " : "";
   lines.push(
@@ -75,7 +76,7 @@ export function renderCheckPretty(report: CheckReport): string {
     }
   }
   lines.push("");
-  for (const note of report.notes) lines.push(paint(pc.dim, `note: ${note}`));
+  for (const note of report.notes) lines.push(paint(pc.dim, `note: ${safeText(note)}`));
   lines.push(paint(pc.dim, `rules: ${DOCS_RULES}`));
   return lines.join("\n");
 }
@@ -110,14 +111,14 @@ export function renderTestReportPretty(r: TestReport): string {
     `  delta          ${paint(pc.bold, `${sign}${r.deltaPoints} points`)}   ${paint(verdictColor, r.verdict)}`,
     "",
   ];
-  for (const n of r.notes) lines.push(paint(pc.dim, `note: ${n}`));
+  for (const n of r.notes) lines.push(paint(pc.dim, `note: ${safeText(n)}`));
   return lines.join("\n");
 }
 
 export function renderSkillSetPretty(res: CheckSkillResult): string {
   const lines: string[] = [];
   lines.push(paint(pc.dim, `efaimo v${VERSION}`));
-  lines.push(`check skills  ${paint(pc.bold, res.label)}   ${res.perSkill.length} skill${res.perSkill.length === 1 ? "" : "s"}`);
+  lines.push(`check skills  ${paint(pc.bold, safeText(res.label))}   ${res.perSkill.length} skill${res.perSkill.length === 1 ? "" : "s"}`);
 
   const dist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, F: 0 };
   for (const s of res.perSkill) dist[s.report.grade.letter]!++;
@@ -136,7 +137,7 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
     const g = s.report.grade;
     const c = s.report.counts;
     lines.push(
-      `  ${gradeColor(g.letter, `${g.letter} (${String(g.score).padStart(3)})`)}  ${s.name.padEnd(nameW)}  ` +
+      `  ${gradeColor(g.letter, `${g.letter} (${String(g.score).padStart(3)})`)}  ${safeText(s.name).padEnd(nameW)}  ` +
         `${paint(pc.red, String(c.error))}e ${paint(pc.yellow, String(c.warn))}w ${paint(pc.cyan, String(c.info))}i`,
     );
   }
@@ -145,7 +146,7 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
     lines.push("");
     lines.push(paint(pc.bold, "across the set"));
     for (const f of sortFindings(res.setFindings)) {
-      lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${f.message}`);
+      lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${safeText(f.message)}`);
     }
   }
 
@@ -153,15 +154,15 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
   if (flagged.length) {
     lines.push("");
     for (const s of flagged) {
-      lines.push(paint(pc.bold, `${s.name}  ${gradeColor(s.report.grade.letter, s.report.grade.letter)}`));
+      lines.push(paint(pc.bold, `${safeText(s.name)}  ${gradeColor(s.report.grade.letter, s.report.grade.letter)}`));
       for (const f of s.report.findings) {
-        lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${f.message}`);
-        if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${f.fixHint}`));
+        lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${safeText(f.message)}`);
+        if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${safeText(f.fixHint)}`));
       }
     }
   }
   lines.push("");
-  lines.push(paint(pc.dim, `${res.perSkill.length} skills under ${res.root}`));
+  lines.push(paint(pc.dim, `${res.perSkill.length} skills under ${safeText(res.root)}`));
   lines.push(paint(pc.dim, `rules: ${DOCS_RULES}`));
   return lines.join("\n");
 }
@@ -169,7 +170,7 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
 export function renderServerWeighPretty(w: ServerWeighResult): string {
   const lines: string[] = [];
   lines.push(paint(pc.dim, `efaimo v${VERSION}`));
-  lines.push(`weigh mcp  ${paint(pc.bold, w.label)}`);
+  lines.push(`weigh mcp  ${paint(pc.bold, safeText(w.label))}`);
   lines.push(`tools ${w.toolCount}   resources ${w.resourceCount}   prompts ${w.promptCount}`);
   lines.push("");
   lines.push("context cost of tool definitions (o200k tokens, estimated)");
@@ -183,9 +184,18 @@ export function renderServerWeighPretty(w: ServerWeighResult): string {
   if (w.perTool.length) {
     lines.push("");
     lines.push("heaviest tools (Claude-style)");
-    for (const [i, t] of w.perTool.slice(0, 8).entries()) {
+    // Derived from the rows actually printed, not a fixed 28. Against the
+    // reference server - the target in --help, on /commands and in every
+    // launch draft - "trigger-long-running-operation" is 30 characters, ate
+    // the pad, and shifted the token column two places right for that one row.
+    // A tool whose pitch is careful measurement was printing a crooked number
+    // column in its own flagship demo. Capped so one pathological name cannot
+    // push the numbers off a terminal.
+    const shown = w.perTool.slice(0, 8);
+    const toolW = Math.min(38, Math.max(20, ...shown.map((t) => safeText(t.name).length)));
+    for (const [i, t] of shown.entries()) {
       lines.push(
-        `  ${String(i + 1).padStart(2)}. ${t.name.padEnd(28)} ${n(t.tokens.claudeStyle).padStart(7)}   desc ${n(t.descriptionTokens)} | schema ${n(t.schemaTokens)}`,
+        `  ${String(i + 1).padStart(2)}. ${safeText(t.name).padEnd(toolW)} ${n(t.tokens.claudeStyle).padStart(7)}   desc ${n(t.descriptionTokens)} | schema ${n(t.schemaTokens)}`,
       );
     }
     if (w.perTool.length > 8) lines.push(paint(pc.dim, `      (+${w.perTool.length - 8} more)`));
@@ -196,19 +206,19 @@ export function renderServerWeighPretty(w: ServerWeighResult): string {
     }
   }
   lines.push("");
-  for (const note of w.notes) lines.push(paint(pc.dim, `note: ${note}`));
+  for (const note of w.notes) lines.push(paint(pc.dim, `note: ${safeText(note)}`));
   return lines.join("\n");
 }
 
 export function renderSkillWeighPretty(w: SkillSetWeighResult): string {
   const lines: string[] = [];
   lines.push(paint(pc.dim, `efaimo v${VERSION}`));
-  lines.push(`weigh skills  ${paint(pc.bold, w.label)}   ${w.perSkill.length} skill${w.perSkill.length === 1 ? "" : "s"}`);
+  lines.push(`weigh skills  ${paint(pc.bold, safeText(w.label))}   ${w.perSkill.length} skill${w.perSkill.length === 1 ? "" : "s"}`);
   lines.push("");
   lines.push(`  ${"skill".padEnd(28)} ${"metadata".padStart(8)} ${"body".padStart(9)} ${"lines".padStart(6)}  refs`);
   for (const s of w.perSkill) {
     lines.push(
-      `  ${s.name.padEnd(28)} ${n(s.metadataTokens).padStart(8)} ${n(s.bodyTokens).padStart(9)} ${String(s.bodyLines).padStart(6)}  ${s.refFileCount ? `${s.refFileCount} files ${n(s.refFileTokens)}` : "-"}`,
+      `  ${safeText(s.name).padEnd(28)} ${n(s.metadataTokens).padStart(8)} ${n(s.bodyTokens).padStart(9)} ${String(s.bodyLines).padStart(6)}  ${s.refFileCount ? `${s.refFileCount} files ${n(s.refFileTokens)}` : "-"}`,
     );
   }
   lines.push("");
@@ -216,7 +226,7 @@ export function renderSkillWeighPretty(w: SkillSetWeighResult): string {
     `totals: metadata ${paint(pc.bold, n(w.totals.metadata))} (always loaded) | body ${n(w.totals.body)} (on trigger) | referenced ${n(w.totals.refFiles)} (on demand)`,
   );
   lines.push("");
-  for (const note of w.notes) lines.push(paint(pc.dim, `note: ${note}`));
+  for (const note of w.notes) lines.push(paint(pc.dim, `note: ${safeText(note)}`));
   return lines.join("\n");
 }
 

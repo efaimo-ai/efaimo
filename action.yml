@@ -21,4 +21,17 @@ runs:
   steps:
     - shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: npx -y efaimo@${{ inputs.version }} ${{ inputs.command }}
+      # Both values go through env, never into the run: body. A ${{ }}
+      # expression inside run: is substituted BEFORE bash sees the script, so
+      # `command` was arbitrary code in the consumer's runner, holding the
+      # consumer's secrets. Anyone wiring a PR title, branch name, issue body
+      # or matrix value into this input (docs/INTEGRATIONS.md recommends this
+      # action for CI) was one backtick away from that. This is the published
+      # action other people run, so the blast radius was never ours.
+      env:
+        EFAIMO_VERSION: ${{ inputs.version }}
+        EFAIMO_COMMAND: ${{ inputs.command }}
+      # Unquoted on purpose: the input is a subcommand plus arguments and has
+      # to word-split. It is now bash doing the splitting on a value bash
+      # received as data, not the expression engine pasting text into source.
+      run: npx -y "efaimo@$EFAIMO_VERSION" $EFAIMO_COMMAND

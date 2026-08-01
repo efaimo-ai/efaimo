@@ -2,11 +2,23 @@ import type { CheckReport, ServerWeighResult, SkillSetWeighResult } from "../cor
 import type { CheckSkillResult } from "../check/check.js";
 import type { WeighDiff } from "../weigh/diff.js";
 import { VERSION } from "../version.js";
+import { safeText } from "../util/safeText.js";
 
 const SEV_LABEL = { error: "🔴 error", warn: "🟡 warn", info: "🔵 info" } as const;
 
+// Everything through here came from the audited target, and
+// docs/INTEGRATIONS.md recommends piping --md into $GITHUB_STEP_SUMMARY, so a
+// hostile tool name or description renders into a page the reader trusts.
+// Two things were missing: control characters (raw ESC bytes were written
+// through literally) and backticks (most call sites wrap the value in a code
+// span, so one backtick closes it and the rest of the name becomes markup).
+// The backtick is neutralised with a zero-width space rather than a backslash,
+// because a backslash is not an escape inside a code span.
 function esc(s: string): string {
-  return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
+  return safeText(s)
+    .replace(/\|/g, "\\|")
+    .replace(/`/g, "​`")
+    .replace(/\n/g, " ");
 }
 
 function findingsTable(lines: string[], findings: CheckReport["findings"]): void {
@@ -21,7 +33,7 @@ export function renderCheckMarkdown(report: CheckReport): string {
   const lines: string[] = [];
   lines.push(`## efaimo check (${report.surface}): grade ${report.grade.letter} (${report.grade.score})`);
   lines.push("");
-  lines.push(`target: \`${report.target}\``);
+  lines.push(`target: \`${esc(report.target)}\``);
   lines.push("");
   if (!report.findings.length) {
     lines.push(report.readiness ? "no quality findings. clean." : "no findings. clean.");
@@ -70,7 +82,7 @@ export function renderSkillSetMarkdown(res: CheckSkillResult): string {
 export function renderWeighMarkdown(w: ServerWeighResult | SkillSetWeighResult): string {
   const lines: string[] = [];
   if (w.kind === "mcp") {
-    lines.push(`## efaimo weigh: \`${w.label}\``);
+    lines.push(`## efaimo weigh: \`${esc(w.label)}\``);
     lines.push("");
     lines.push(`tools ${w.toolCount} | resources ${w.resourceCount} | prompts ${w.promptCount}`);
     lines.push("");
@@ -94,7 +106,7 @@ export function renderWeighMarkdown(w: ServerWeighResult | SkillSetWeighResult):
       }
     }
   } else {
-    lines.push(`## efaimo weigh (skills): \`${w.label}\``);
+    lines.push(`## efaimo weigh (skills): \`${esc(w.label)}\``);
     lines.push("");
     lines.push("| skill | metadata (always) | body (on trigger) | lines | referenced files |");
     lines.push("|---|---|---|---|---|");

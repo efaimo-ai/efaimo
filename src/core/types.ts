@@ -192,7 +192,8 @@ export interface SkillInfo {
   frontmatterRaw: string;
   body: string;
   bodyLines: number;
-  referencedPaths: { raw: string; resolved: string; exists: boolean; source: "link" | "code" }[];
+  /** `escapes` = the reference resolves outside the skill directory. weigh must not read those; S106 reports them. */
+  referencedPaths: { raw: string; resolved: string; exists: boolean; escapes: boolean; source: "link" | "code" }[];
   files: { path: string; bytes: number }[];
   parseError?: string;
 }

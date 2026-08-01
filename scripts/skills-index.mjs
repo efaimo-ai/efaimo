@@ -134,9 +134,21 @@ if (!n) {
 const dist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
 for (const r of ok) dist[r.grade.letter]++;
 const withErrors = ok.filter((r) => r.counts.error > 0).length;
+// True median: mean of the two middles on an even count, not the upper one.
+// This was the THIRD copy of this formula. The other two (efaimo-ai's
+// src/lib/measure.js and tools/gates.mjs) were both corrected on 2026-08-01,
+// and the note there says two copies was the whole story. It was not: this is
+// the GENERATOR, the thing that writes the JSON the other two read. Over the
+// committed 36-skill corpus the two answers are 1,673 and 1,632, and
+// research/skills-index/REPORT.md has been publishing 1,673 next to a site
+// rendering 1,632 from the same rows. Independent re-derivation cannot catch a
+// shared definition error, and it especially cannot catch the copy upstream of
+// the data.
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
-  return s.length ? s[Math.floor(s.length / 2)] : 0;
+  if (!s.length) return 0;
+  const m = s.length / 2;
+  return s.length % 2 ? s[Math.floor(m)] : (s[m - 1] + s[m]) / 2;
 };
 const medianBody = median(ok.map((r) => r.body));
 const medianMeta = median(ok.map((r) => r.meta));
