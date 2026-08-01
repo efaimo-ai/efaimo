@@ -9,3 +9,12 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# The Skills Quality Index corpus is TRANSIENT: scripts/skills-corpus.mjs
+# fetches it from the commits research/skills-index/manifest.json pins, and
+# scripts/skills-index.mjs grades it into REPORT.md + the site JSON. The clones
+# themselves are never committed. On 2026-08-02 a plain `git add -A` swept all
+# three in as gitlinks (mode 160000) with no .gitmodules, which gives anyone
+# cloning this repo three broken entries. Only the manifest and the report are
+# the artifact.
+research/skills-index/*/
