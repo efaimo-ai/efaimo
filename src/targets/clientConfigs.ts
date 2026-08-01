@@ -10,6 +10,13 @@ export interface ClientServerEntry {
 
 export interface ClientConfigResult {
   entries: ClientServerEntry[];
+  /**
+   * Config files that came from the CURRENT DIRECTORY rather than the user
+   * config. Every command in these was written by whoever wrote the
+   * repository you are standing in, and --client spawns them. The CLI warns
+   * about these by name before it executes anything.
+   */
+  fromCwd: string[];
   /** Config files that were found and parsed. */
   sources: string[];
   /** Paths that were checked but absent. */
@@ -53,7 +60,7 @@ export function loadClientServers(client: string, cwd = process.cwd()): ClientCo
       throw new Error(`unknown client "${client}" (supported: ${SUPPORTED_CLIENTS.join(", ")})`);
   }
 
-  const result: ClientConfigResult = { entries: [], sources: [], missing: [] };
+  const result: ClientConfigResult = { entries: [], sources: [], missing: [], fromCwd: [] };
   const seen = new Set<string>();
   for (const { file, pick } of candidates) {
     if (!fs.existsSync(file)) {
@@ -73,6 +80,8 @@ export function loadClientServers(client: string, cwd = process.cwd()): ClientCo
       continue;
     }
     result.sources.push(file);
+    // Project-scoped config is the untrusted kind: it ships with a repo.
+    if (file.startsWith(cwd)) result.fromCwd.push(file);
     for (const [name, valueRaw] of Object.entries(servers)) {
       if (seen.has(name)) continue;
       const target = entryToTarget(name, valueRaw, client);

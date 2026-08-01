@@ -171,6 +171,34 @@ program
         );
       }
       console.error(pc.dim(`config: ${conf.sources.join(", ")}`));
+      // Say what is about to be EXECUTED, not just which file it came from.
+      //
+      // --client reads .mcp.json, .cursor/mcp.json and .vscode/mcp.json from
+      // the CURRENT DIRECTORY as well as the user config, and then spawns
+      // every command in them. Cloning an untrusted repo and running the audit
+      // tool inside it was therefore arbitrary code execution, and the only
+      // thing printed was the friendly config key, never the command. Cursor
+      // and VS Code gate project-scoped MCP config behind workspace trust;
+      // this printed nothing at all.
+      //
+      // Listing them is the minimum. A stdio entry names a real command that
+      // is about to run on this machine.
+      for (const e of conf.entries) {
+        const t = e.target;
+        const shown =
+          t.kind === "stdio"
+            ? [t.command, ...t.args].join(" ") + (t.env && Object.keys(t.env).length ? `   (+${Object.keys(t.env).length} env)` : "")
+            : t.url;
+        console.error(pc.dim(`  ${e.name}: ${shown}`));
+      }
+      if (conf.fromCwd.length) {
+        console.error(
+          pc.yellow(
+            `  ! ${conf.fromCwd.length} of these came from the current directory (${conf.fromCwd.join(", ")}), not your user config.\n` +
+              `    Auditing a stdio server means executing it. Only continue in a repository you trust.`,
+          ),
+        );
+      }
       targets.push(...conf.entries.map((e) => e.target));
     }
     if (targetArg) {

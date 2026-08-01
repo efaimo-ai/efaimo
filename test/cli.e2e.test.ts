@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -21,7 +22,14 @@ describe.skipIf(!built)("cli e2e (built dist)", () => {
   it("prints its version", () => {
     const r = run(["--version"]);
     expect(r.code).toBe(0);
-    expect(r.out.trim()).toBe("0.1.0");
+    // Derived, not typed. This was hardcoded "0.1.0" and would have had to be
+    // hand-edited at every release: a version string in a test is one more
+    // copy that drifts, and this file is asserting that the binary agrees with
+    // package.json, not that it prints one particular number.
+    const pkg = JSON.parse(
+      readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+    ) as { version: string };
+    expect(r.out.trim()).toBe(pkg.version);
   });
 
   it("rejects a non-numeric --timeout with a clear error (exit 2)", () => {

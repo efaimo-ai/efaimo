@@ -2,7 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 import type { SkillInfo, SkillSet } from "../core/types.js";
-import { walkFiles } from "../util/misc.js";
+import { walkFiles, readTextSafe } from "../util/misc.js";
+
+/**
+ * Cap on a single SKILL.md. Referenced files were already capped at 512KB by
+ * readTextSafe while the body itself went through an uncapped readFileSync:
+ * the safer path had the limit and the main one did not. A 35MB SKILL.md
+ * tokenized to 7.2 million tokens at 367MB resident, and auditing skills you
+ * have NOT installed yet is the stated use case, so this is untrusted input
+ * by construction. 2MB is far above any real skill (the largest in the graded
+ * corpus is a few tens of KB) and far below a memory problem.
+ */
+const MAX_SKILL_BYTES = 2 * 1024 * 1024;
 
 const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 // Only backticked strings that look like a real intra-skill path: a directory
@@ -24,7 +35,14 @@ export function parseSkillFile(file: string): SkillInfo {
   };
   let raw: string;
   try {
-    raw = fs.readFileSync(file, "utf8");
+    // Capped, like the referenced files this same module already caps at 512KB
+    // via readTextSafe. The body went through plain readFileSync with no limit
+    // while the SAFER path had a cap, and the stated use case is auditing
+    // skills BEFORE you install them, which is untrusted input by definition.
+    // A 35MB SKILL.md tokenized to 7.2M tokens and 367MB resident.
+    const capped = readTextSafe(file, MAX_SKILL_BYTES);
+    if (capped === undefined) throw new Error("unreadable");
+    raw = capped;
   } catch (e) {
     return { ...base, parseError: `cannot read file: ${(e as Error).message}` };
   }

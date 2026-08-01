@@ -4,6 +4,56 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - unreleased
+
+Everything below was on `main` and unpublished. That gap was itself the
+problem: `efaimo@0.1.0` still tells every user "the spec finalizes
+2026-07-28" (a future tense about a date that has passed), the README
+documents `--strict-readiness` and `--window`, and neither flag exists in
+0.1.0. Cutting this release is what makes the documentation true.
+
+### Security
+
+- `--client` now prints the actual command of every server it is about to
+  spawn, and warns by name when a config came from the CURRENT DIRECTORY
+  rather than your user config. It reads `.mcp.json`, `.cursor/mcp.json` and
+  `.vscode/mcp.json` from the working directory and executes what it finds, so
+  running the audit inside a repository you cloned was arbitrary code
+  execution, announced only by a friendly config key.
+- Terminal control characters are stripped from anything the audited target
+  supplied, at the render boundary of the pretty and markdown reporters. A
+  hostile server could put ESC[1A ESC[2K in a tool name and rewrite the grade
+  line printed above its own finding, so the reader saw "grade A (100), 0
+  errors" while the contradiction was erased. `--no-color` did not help; that
+  only suppresses colours efaimo adds.
+- `.env` loading is restricted to `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`.
+  It previously set ANY key from a working-directory `.env`, so a cloned
+  repository could set `NODE_TLS_REJECT_UNAUTHORIZED=0` and silently disable
+  certificate verification for later HTTPS calls, including ones carrying your
+  key.
+- Skill references that resolve outside the skill directory are no longer read
+  by `weigh`. S106 already warned about them, but only after the read.
+- `SKILL.md` is read through the same 512KB-class cap as referenced files
+  (2MB), instead of an uncapped read.
+- The published composite Action no longer interpolates its inputs into a bash
+  `run:` body, which was script injection in the consumer's runner.
+
+### Fixed
+
+- `efaimo test` reports a two-sided Fisher exact p and a 95% interval, and
+  `helps`/`hurts` require p < 0.05. The old rule was a +-15 point threshold at
+  a default of 5 trials per arm, where 5/5 against 4/5 is +20 points and
+  p = 1.0000. Judge now runs at temperature 0; an unparseable judge verdict is
+  excluded rather than scored FAIL; default trials 5 -> 20.
+- E123 fires. The matcher was `(delete|...)` and `_` is a word character,
+  so `delete_file`, `deleteFile` and `drop_table` never matched: the rule was
+  dead for every conventionally named tool.
+- A rule that throws is reported as an ungraded E000 instead of being silently
+  swallowed, which used to RAISE the grade.
+- `weigh`'s heaviest-tools column derives its width from the rows printed, so
+  a 30-character tool name no longer shifts the number column.
+- The median in `scripts/skills-index.mjs` is the true median.
+
 ## [Unreleased]
 
 The MCP specification published on 2026-07-28. The readiness rules had been

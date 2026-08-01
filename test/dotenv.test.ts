@@ -1,8 +1,15 @@
 import { describe, it, expect, afterEach } from "vitest";
+// The parsing rules are tested with a test-local allowlist so they stay
+// meaningful independently of WHICH keys the CLI accepts; the allowlist itself
+// is tested at the bottom of this file against the real one.
+const TESTKEYS = new Set([
+  "EFAIMO_T_A", "EFAIMO_T_B", "EFAIMO_T_KEEP", "EFAIMO_T_Q", "EFAIMO_T_S",
+  "EFAIMO_T_EQ", "EFAIMO_T_OK", "EFAIMO_T_EXP", "EFAIMO_T_C1", "EFAIMO_T_C2", "EFAIMO_T_C3",
+]);
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadDotEnv } from "../src/util/dotenv.js";
+import { loadDotEnv, ALLOWED } from "../src/util/dotenv.js";
 
 function withEnvFile(body: string): string {
   const dir = mkdtempSync(join(tmpdir(), "efaimo-env-"));
@@ -18,14 +25,14 @@ afterEach(() => {
 describe("loadDotEnv", () => {
   it("returns [] and does nothing when no .env exists", () => {
     const dir = mkdtempSync(join(tmpdir(), "efaimo-env-"));
-    expect(loadDotEnv(dir)).toEqual([]);
+    expect(loadDotEnv(dir, TESTKEYS)).toEqual([]);
     rmSync(dir, { recursive: true, force: true });
   });
 
   it("loads KEY=VALUE lines, skipping comments and blanks", () => {
     touched.push("EFAIMO_T_A", "EFAIMO_T_B");
     const dir = withEnvFile("# a comment\n\nEFAIMO_T_A=hello\nEFAIMO_T_B = world \n");
-    const loaded = loadDotEnv(dir);
+    const loaded = loadDotEnv(dir, TESTKEYS);
     expect(loaded).toEqual(["EFAIMO_T_A", "EFAIMO_T_B"]);
     expect(process.env.EFAIMO_T_A).toBe("hello");
     expect(process.env.EFAIMO_T_B).toBe("world");
@@ -35,14 +42,14 @@ describe("loadDotEnv", () => {
     touched.push("EFAIMO_T_KEEP");
     process.env.EFAIMO_T_KEEP = "from-shell";
     const dir = withEnvFile("EFAIMO_T_KEEP=from-file");
-    expect(loadDotEnv(dir)).toEqual([]);
+    expect(loadDotEnv(dir, TESTKEYS)).toEqual([]);
     expect(process.env.EFAIMO_T_KEEP).toBe("from-shell");
   });
 
   it("strips matching surrounding quotes but keeps inner characters", () => {
     touched.push("EFAIMO_T_Q", "EFAIMO_T_S", "EFAIMO_T_EQ");
     const dir = withEnvFile(`EFAIMO_T_Q="a=b#c"\nEFAIMO_T_S='x y'\nEFAIMO_T_EQ=k=v=w`);
-    loadDotEnv(dir);
+    loadDotEnv(dir, TESTKEYS);
     expect(process.env.EFAIMO_T_Q).toBe("a=b#c");
     expect(process.env.EFAIMO_T_S).toBe("x y");
     expect(process.env.EFAIMO_T_EQ).toBe("k=v=w");
@@ -51,22 +58,48 @@ describe("loadDotEnv", () => {
   it("ignores malformed keys and keyless lines", () => {
     touched.push("EFAIMO_T_OK");
     const dir = withEnvFile("=nokey\n123BAD=1\nno-dash=1\nEFAIMO_T_OK=1");
-    expect(loadDotEnv(dir)).toEqual(["EFAIMO_T_OK"]);
+    expect(loadDotEnv(dir, TESTKEYS)).toEqual(["EFAIMO_T_OK"]);
   });
 
   it("supports an `export ` prefix", () => {
     touched.push("EFAIMO_T_EXP");
     const dir = withEnvFile("export EFAIMO_T_EXP=exported");
-    expect(loadDotEnv(dir)).toEqual(["EFAIMO_T_EXP"]);
+    expect(loadDotEnv(dir, TESTKEYS)).toEqual(["EFAIMO_T_EXP"]);
     expect(process.env.EFAIMO_T_EXP).toBe("exported");
   });
 
   it("strips a whitespace-preceded inline comment, but not a mid-token # or one inside quotes", () => {
     touched.push("EFAIMO_T_C1", "EFAIMO_T_C2", "EFAIMO_T_C3");
     const dir = withEnvFile(`EFAIMO_T_C1=val # trailing note\nEFAIMO_T_C2=a#b\nEFAIMO_T_C3="x # y"`);
-    loadDotEnv(dir);
+    loadDotEnv(dir, TESTKEYS);
     expect(process.env.EFAIMO_T_C1).toBe("val");
     expect(process.env.EFAIMO_T_C2).toBe("a#b");
     expect(process.env.EFAIMO_T_C3).toBe("x # y");
+  });
+});
+
+describe("the default allowlist", () => {
+  it("accepts only the two keys the CLI actually consumes", () => {
+    expect([...ALLOWED].sort()).toEqual(["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]);
+  });
+
+  // The reason the allowlist exists. loadDotEnv reads the .env of the CURRENT
+  // DIRECTORY, so a repository you cloned could set this and silently turn off
+  // certificate verification for every later HTTPS call, including the ones
+  // that carry your API key.
+  it("refuses NODE_TLS_REJECT_UNAUTHORIZED from a repo-local .env", () => {
+    const dir = mkdtempSync(join(tmpdir(), "efaimo-env-"));
+    writeFileSync(join(dir, ".env"), "NODE_TLS_REJECT_UNAUTHORIZED=0\nANTHROPIC_API_KEY=sk-test\n");
+    const loaded = loadDotEnv(dir);
+    expect(loaded).toEqual(["ANTHROPIC_API_KEY"]);
+    expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+
+  it("refuses NODE_OPTIONS, which would inject a module into the process", () => {
+    const dir = mkdtempSync(join(tmpdir(), "efaimo-env-"));
+    writeFileSync(join(dir, ".env"), "NODE_OPTIONS=--require /tmp/evil.js\n");
+    expect(loadDotEnv(dir)).toEqual([]);
+    expect(process.env.NODE_OPTIONS).toBeUndefined();
   });
 });

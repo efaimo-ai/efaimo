@@ -12,7 +12,16 @@ import { resolve } from "node:path";
  * secrets are not forwarded to spawned MCP servers: minimalChildEnv() passes an
  * allowlist that excludes API keys.
  */
-export function loadDotEnv(dir: string = process.cwd()): string[] {
+/**
+ * The only keys this loader may set. It used to set ANY key found in a .env in
+ * the CURRENT DIRECTORY, which means a repository you cloned could inject
+ * NODE_TLS_REJECT_UNAUTHORIZED=0 and silently disable certificate verification
+ * for every later HTTPS call, including the ones carrying your API key. The
+ * file header already said only two keys were wanted; this enforces it.
+ */
+export const ALLOWED = new Set(["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]);
+
+export function loadDotEnv(dir: string = process.cwd(), allowed: ReadonlySet<string> = ALLOWED): string[] {
   let text: string;
   try {
     text = readFileSync(resolve(dir, ".env"), "utf8");
@@ -28,6 +37,7 @@ export function loadDotEnv(dir: string = process.cwd()): string[] {
     if (eq <= 0) continue;
     const key = line.slice(0, eq).trim();
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (!allowed.has(key)) continue;
     if (process.env[key] !== undefined) continue;
     let val = line.slice(eq + 1).trim();
     const quote = val[0];
