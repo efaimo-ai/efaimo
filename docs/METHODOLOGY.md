@@ -104,3 +104,50 @@ prompt-cache hits and reproducibility.
 efaimo estimates the **cost of tool/skill definitions sitting in context**. It does
 not measure per-call argument/result tokens, host framing, or model-side reasoning.
 For end-to-end token accounting, instrument your agent run directly.
+
+## `efaimo test`: what the verdict means
+
+The verdict is a significance test, not a threshold on the size of the gap.
+
+Each arm runs N trials of the same task, one with the skill in the system
+prompt and one without, and an LLM judge returns PASS or FAIL per trial. The
+two arms form a 2x2 table, and the report carries:
+
+- a **two-sided Fisher exact p**. Fisher rather than chi-squared because the
+  counts are single digits, where the chi-squared approximation is not
+  trustworthy;
+- a **95% Newcombe interval on the delta**, built from each arm's Wilson
+  interval. Wilson rather than the normal approximation because runs land on
+  the boundaries (8/8, 0/8), where the normal interval has zero width and
+  would claim certainty from eight trials.
+
+`helps` and `hurts` require **p < 0.05**. Anything else is `no measurable
+effect`, however large the gap looks, and the report says so with the p
+attached. The default is 20 trials per arm: below roughly that, a partial
+result cannot reach significance at all.
+
+Until 2026-08-02 the rule was `>= +15 points helps`, with a default of 5
+trials. At that size 5/5 against 4/5 is +20 points and p = 1.0000. See ADR-028.
+
+Two things the judge does, which matter for reading a result:
+
+- it runs at **temperature 0**, so the same answer grades the same way twice.
+  The subject arm stays at temperature 1, because normal behaviour is the thing
+  being measured;
+- a reply that is neither PASS nor FAIL is **excluded and counted separately**,
+  not scored as a failure. A refusal or an API error is not evidence about the
+  skill.
+
+### What this design still cannot tell you
+
+Named here rather than left for a reader to discover:
+
+- **The judge is the same model as the subject.** A separate judge model would
+  be stronger.
+- **The control arm receives no system prompt at all**, so "the skill's
+  content" is confounded with "having any system prompt". A length-matched
+  placebo is the fix and is not implemented.
+- **Two scenarios is a demonstration, not a benchmark.** The committed runs
+  show the method works, not that skills in general do or do not help.
+
+Treat a single scenario as evidence about that scenario.
