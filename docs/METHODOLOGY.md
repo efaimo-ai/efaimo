@@ -60,7 +60,7 @@ the share.
 
 Because the denominator is an assumption rather than a measurement, efaimo
 always names it in the output ("~4.3% of a 1M window") and lets you set your
-own with `--window`:
+own with `--window` (**unreleased: on `main`, not in `efaimo@0.1.0`**; 0.1.0 hardcodes 200k and prints `of a 200k window`):
 
 ```bash
 npx efaimo weigh "npx -y my-server" --window 200000

@@ -20,6 +20,20 @@ describe("meta", () => {
     expect(VERSION).toBe(pkg.version);
   });
 
+  // The third version string in the repo, and the only one nothing watched.
+  // SKILL.md ships in package.json's files list and is what `npx skills add
+  // efaimo-ai/efaimo` installs, so a stale number here is a version an agent
+  // reads and reports to a user. Given how this project actually fails - a
+  // hand-maintained number quietly going stale next to a derived one - an
+  // unpinned duplicate is a scheduled bug, not a hypothetical.
+  it("SKILL.md frontmatter version matches package.json", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as { version: string };
+    const skill = fs.readFileSync(path.join(root, "SKILL.md"), "utf8");
+    const m = skill.match(/^\s{2}version:\s*"([^"]+)"/m);
+    expect(m, "no `  version: \"x.y.z\"` line under metadata in SKILL.md").not.toBeNull();
+    expect(m![1]).toBe(pkg.version);
+  });
+
   it("rule ids are unique", () => {
     const ids = [...MCP_RULES, ...SKILL_RULES].map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);

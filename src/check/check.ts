@@ -23,8 +23,10 @@ import { VERSION } from "../version.js";
 function buildReport(surface: Surface, target: string, findings: Finding[], notes: string[]): CheckReport {
   // MCP readiness findings (E101-E118) are a migration diff for the 2026-07-28
   // spec: a migration not yet made is a to-do list, not a defect in what
-  // shipped. Reported separately and never graded. (The spec published on
-  // 2026-07-28; whether readiness starts counting is ADR-014's open decision.)
+  // shipped. Reported separately and never graded (ADR-014, reaffirmed in
+  // ADR-027). That decision is CLOSED: the spec published on 2026-07-28 and
+  // readiness still does not count toward a grade. This comment described it
+  // as open for a day after ADR-027, in the file that implements the split.
   const readinessAll: Finding[] = [];
   const gradedAll: Finding[] = [];
   for (const f of findings) {

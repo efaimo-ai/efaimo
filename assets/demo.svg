@@ -16,7 +16,7 @@
 
   <text class="m" xml:space="preserve" x="34" y="237" fill="#79828F">context cost of tool definitions (o200k tokens, estimated)</text>
   <text class="m" xml:space="preserve" x="34" y="266" fill="#AEB6C2">  raw JSON           <tspan fill="#57E7D6">1,607</tspan></text>
-  <text class="m" xml:space="preserve" x="34" y="295" fill="#AEB6C2">  Claude-style       <tspan fill="#57E7D6">1,120</tspan>   <tspan fill="#7FF0E3">(~0.6% of a 200k window)</tspan></text>
+  <text class="m" xml:space="preserve" x="34" y="295" fill="#AEB6C2">  Claude-style       <tspan fill="#57E7D6">1,120</tspan>   <tspan fill="#7FF0E3">(~0.1% of a 1M window)</tspan></text>
   <text class="m" xml:space="preserve" x="34" y="324" fill="#AEB6C2">  OpenAI tools       <tspan fill="#57E7D6">1,142</tspan></text>
 
   <text class="m" xml:space="preserve" x="34" y="382" fill="#79828F">heaviest tools (Claude-style)</text>
