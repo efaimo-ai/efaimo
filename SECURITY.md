@@ -16,9 +16,22 @@ input:
   otherwise run yourself.
 - Tool descriptions, skill bodies, and server instructions are untrusted text.
   efaimo reads them to grade them and never executes them.
-- efaimo does not send your code or server output anywhere. The only network calls
-  are: connecting to the target you named, and, only with `--anthropic`, the
-  Anthropic `count_tokens` API using your `ANTHROPIC_API_KEY`.
+- efaimo sends no telemetry, and does not send your code or server output
+  anywhere. It does make these network calls, and this list was incomplete
+  until 2026-08-02:
+  - the target you named;
+  - for a remote target that answers `401`, the OAuth resource-metadata URL
+    given in its `WWW-Authenticate` header, and then the authorization-server
+    URL named in that document. Both are hosts you did not type, taken from
+    the target's own response, and both go through the same SSRF guard as the
+    target itself;
+  - `\<origin\>/.well-known/mcp` on a remote target;
+  - with `--conformance`, an `npx` fetch of the pinned
+    `@modelcontextprotocol/conformance` package from the npm registry;
+  - with `--anthropic`, the Anthropic `count_tokens` API using your
+    `ANTHROPIC_API_KEY`;
+  - with `efaimo test --live`, the model API for the model you selected
+    (Anthropic or OpenAI), using your own key.
 
 ## Not a security scanner
 

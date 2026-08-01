@@ -18,6 +18,18 @@ skill well-formed", or "add a CI gate / badge for context cost".
 
 Run via `npx efaimo` (no install needed).
 
+**Before running any of these against a stdio server: auditing one means
+executing it.** `weigh` and `check --mcp` start the command you pass as a child
+process and speak MCP to it, because that is the only way to see the tool
+definitions it would put in a context window. So only point them at commands
+you would be willing to run yourself. A remote target (`https://...`) is not
+executed and is the safe option for something you do not trust. `--client`
+reads the MCP config files in the current directory as well as your user
+config, so running it inside a repository you did not write means starting the
+servers that repository configured. This warning lives in `SECURITY.md` and did
+not live here, which is the wrong way round: the policy is where humans look,
+and this file is where agents take orders.
+
 - **Weigh context cost of an MCP server**
   `npx efaimo weigh "npx -y <server-package>"` for a stdio server, or
   `npx efaimo weigh https://host/mcp` for a remote one. Add `--json` for machine

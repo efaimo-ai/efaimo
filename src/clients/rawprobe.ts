@@ -62,8 +62,12 @@ function toOutcome(reply: RpcReply, timeoutMessage: string): ProbeOutcome {
  * initialized" and "Mcp-Session-Id header is required", -32001 for "Session not
  * found"), and the MCP-defined ones MOVED between the locked RC and the
  * published spec: MissingRequiredClientCapability went -32003 to -32021 and
- * UnsupportedProtocolVersion went -32004 to -32022, with -32020 HeaderMismatch
- * added alongside them. -32002 (resource not found) is retired outright,
+ * UnsupportedProtocolVersion went -32004 to -32022, and HeaderMismatch moved
+ * the same way, -32001 to -32020. This comment said HeaderMismatch was "added
+ * alongside them", which was wrong: the RC already defined it at -32001 in the
+ * transport prose, and what the published revision added was its entry in the
+ * schema. The distinction matters to anyone still returning -32001.
+ * -32002 (resource not found) is retired outright,
  * replaced by -32602 and promised never to be reused. Matching on numbers
  * would have rotted here on 2026-07-28; matching on messages did not.
  */

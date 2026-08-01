@@ -22,11 +22,11 @@ jobs:
       contents: write # cut the Release and move the major tag
       id-token: write # OIDC trusted publishing + provenance
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 11.1.2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
@@ -38,7 +38,14 @@ jobs:
       - run: node dist/cli.js check --skill ./SKILL.md --strict
       # OIDC trusted publishing needs npm >= 11.5.1; the Node 24 runner may bundle
       # an older 11.x, so upgrade npm before publishing.
-      - run: npm install -g npm@latest
+      # Pinned exactly. This ran as `npm@latest` inside the job that holds
+      # id-token: write and publishes to npm, so whatever the registry served
+      # that minute executed next to the publish credentials. The sibling site
+      # repo already made this argument in writing about wrangler and pins it
+      # to an exact version; this workflow was doing the opposite in the one
+      # place with more to lose. >=11.5.1 is the real constraint (OIDC trusted
+      # publishing), so the floor is met with room to spare.
+      - run: npm install -g npm@11.19.0
       - run: npm publish --provenance --access public
 
       # Everything below is tag-only and runs after a successful publish, so a
