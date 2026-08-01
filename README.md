@@ -286,7 +286,10 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 |---|---|
 | **S101 to S106** | skills: frontmatter and trigger quality, trigger collisions, context budget, reference integrity, injection hygiene |
 | **E101 to E118** | MCP 2026-07-28 readiness: deprecated primitives, statelessness, `server/discover`, `resultType`, cache fields, transport |
-| **E121 to E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
+| **E121 to E128, E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
+
+`E000` is not a finding about your server: it means one of efaimo's own rules
+threw and was skipped, so the report is incomplete. It is never scored.
 
 Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
 findings (E101-E118) are reported as an ungraded migration diff, which

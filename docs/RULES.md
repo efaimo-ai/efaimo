@@ -7,7 +7,7 @@ Grade starts at 100; each error costs 15, each warning 5, each info 1.
 `A >= 90, B >= 80, C >= 70, D >= 60, else F`.
 
 MCP checks split into **2026-07-28 readiness** (E101-E118) and **quality**
-(E121-E130); skill checks are S1xx. **Only quality and skill findings are
+(E121-E128 and E130, with no E129); skill checks are S1xx. **Only quality and skill findings are
 graded.** Readiness findings are reported as a separate, ungraded **migration
 diff**: the two answer different questions. The grade is what a model
 experiences from this tool surface; readiness is whether a 2026-07-28 client can
@@ -41,10 +41,15 @@ rules are heuristics and say so in their detail line.
 | E117 | warn | only the deprecated HTTP+SSE transport worked; Streamable HTTP failed | 2026-07-28 changelog |
 | E118 | warn | a `tools/list` or `server/discover` result omits the required `ttlMs`/`cacheScope` cache fields (SEP-2549, CacheableResult; also required on prompts/list, resources/list, resources/read, resources/templates/list). Both surfaces efaimo calls are measured and the message names the ones that failed. `server/discover` counts only since the published spec made `DiscoverResult` extend `CacheableResult`; under the locked RC it did not | 2026-07-28 changelog |
 
-## MCP quality (E121-E130)
+## MCP quality (E121-E128, E130)
+
+There is no E129. The range used to be written "E121-E130", which implies a
+contiguous block and invites a lookup that finds nothing; ids are stable and
+never reused, so a gap is permanent and is better stated than smoothed over.
 
 | id | sev | what it catches |
 |---|---|---|
+| E000 | warn | a rule threw and was skipped, so this report is incomplete. **Reported but never scored**: a broken rule is our defect, not the target's, and must not cost it points. It exists because `runRules` used to swallow the exception silently, which made a crashing rule indistinguishable from a passing one and silently RAISED the grade |
 | E121 | error/warn | tool description missing, a placeholder, or under ~20 chars |
 | E122 | warn | description misses 3+ of 4 quality axes (length, when-to-use, params documented, mentions result), mirrors Glama's tool-definition-quality dimensions, computed locally |
 | E123 | warn/info | no tools declare annotations; a destructive-looking tool lacks `destructiveHint` |
