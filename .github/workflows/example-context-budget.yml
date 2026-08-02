@@ -1,8 +1,11 @@
 # Example: drop this in a downstream MCP-server repo to gate context cost on PRs.
 # Commit a base.json baseline first:
 #   npx efaimo weigh "npx -y your-server" --out base.json
+# In YOUR repo the trigger is `on: [pull_request]`. In THIS repo it is manual
+# only: "your-server" is a placeholder, so the pull_request trigger it shipped
+# with would have hung a spurious red check on the first outside PR.
 name: context-budget
-on: [pull_request]
+on: [workflow_dispatch]
 jobs:
   weigh:
     runs-on: ubuntu-latest

@@ -46,12 +46,22 @@ jobs:
       # place with more to lose. >=11.5.1 is the real constraint (OIDC trusted
       # publishing), so the floor is met with room to spare.
       - run: npm install -g npm@11.19.0
+      # Tag-gated. This step ran unguarded until 2026-08-02 behind a comment
+      # calling a workflow_dispatch run "a safe auth smoke test" - which was
+      # true only while package.json matched the published version, because
+      # the registry rejects a duplicate. The moment 0.1.1 was staged on main,
+      # that premise silently died and the dispatch button became a live,
+      # noteless publish. A safety that rests on a value another commit can
+      # move is a comment, not a guard; this `if` is the guard.
       - run: npm publish --provenance --access public
+        if: startsWith(github.ref, 'refs/tags/v')
+      # What a dispatch run IS for: the full gate chain plus a pack and
+      # dry-run publish, touching the registry not at all.
+      - run: npm publish --dry-run
+        if: github.event_name == 'workflow_dispatch'
 
       # Everything below is tag-only and runs after a successful publish, so a
-      # Release never announces a version the registry rejected. (A
-      # workflow_dispatch run stops at the publish step, which is what makes it
-      # a safe auth smoke test.)
+      # Release never announces a version the registry rejected.
       - name: cut the GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:

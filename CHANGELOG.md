@@ -12,6 +12,13 @@ problem: `efaimo@0.1.0` still tells every user "the spec finalizes
 documents `--strict-readiness` and `--window`, and neither flag exists in
 0.1.0. Cutting this release is what makes the documentation true.
 
+The MCP specification published on 2026-07-28. The readiness rules here had
+been written against the Release Candidate locked 2026-05-21, and the two are
+not the same document: `DiscoverResult.serverInfo` was deleted,
+`DiscoverResult` became cacheable, and three error codes were renumbered. The
+entries below that name the published spec are the repairs, plus the tooling
+that notices the next revision by itself.
+
 ### Security
 
 - `--client` now prints the actual command of every server it is about to
@@ -38,29 +45,6 @@ documents `--strict-readiness` and `--window`, and neither flag exists in
 - The published composite Action no longer interpolates its inputs into a bash
   `run:` body, which was script injection in the consumer's runner.
 
-### Fixed
-
-- `efaimo test` reports a two-sided Fisher exact p and a 95% interval, and
-  `helps`/`hurts` require p < 0.05. The old rule was a +-15 point threshold at
-  a default of 5 trials per arm, where 5/5 against 4/5 is +20 points and
-  p = 1.0000. Judge now runs at temperature 0; an unparseable judge verdict is
-  excluded rather than scored FAIL; default trials 5 -> 20.
-- E123 fires. The matcher was `(delete|...)` and `_` is a word character,
-  so `delete_file`, `deleteFile` and `drop_table` never matched: the rule was
-  dead for every conventionally named tool.
-- A rule that throws is reported as an ungraded E000 instead of being silently
-  swallowed, which used to RAISE the grade.
-- `weigh`'s heaviest-tools column derives its width from the rows printed, so
-  a 30-character tool name no longer shifts the number column.
-- The median in `scripts/skills-index.mjs` is the true median.
-
-## [Unreleased]
-
-The MCP specification published on 2026-07-28. The readiness rules had been
-written against the Release Candidate locked 2026-05-21, and the two are not
-the same document: `DiscoverResult.serverInfo` was deleted, `DiscoverResult`
-became cacheable, and three error codes were renumbered.
-
 ### Added
 
 - `check --strict-readiness`: exit non-zero when the 2026-07-28 migration diff
@@ -68,6 +52,9 @@ became cacheable, and three error codes were renumbered.
   default exit code is unchanged. It exists because a team that had finished
   migrating had no way to stay migrated: `--strict` covers quality only, so
   nothing in CI could catch a regression back onto the legacy handshake.
+- `--window <tokens>` on `weigh` and `check`: report the context-window share
+  against a window you name instead of the 1,000,000-token default. Absolute
+  token counts do not change; only the denominator does.
 - `npm run spec:drift`, plus a daily `spec-drift` workflow: fails when an MCP
   revision newer than the one efaimo targets publishes, or when the targeted
   revision changes under its own tag. The 2026-07-28 publication went unnoticed
@@ -86,6 +73,19 @@ became cacheable, and three error codes were renumbered.
 
 ### Fixed
 
+- `efaimo test` reports a two-sided Fisher exact p and a 95% interval, and
+  `helps`/`hurts` require p < 0.05. The old rule was a +-15 point threshold at
+  a default of 5 trials per arm, where 5/5 against 4/5 is +20 points and
+  p = 1.0000. Judge now runs at temperature 0; an unparseable judge verdict is
+  excluded rather than scored FAIL; default trials 5 -> 20.
+- E123 fires. The matcher was `(delete|...)` and `_` is a word character,
+  so `delete_file`, `deleteFile` and `drop_table` never matched: the rule was
+  dead for every conventionally named tool.
+- A rule that throws is reported as an ungraded E000 instead of being silently
+  swallowed, which used to RAISE the grade.
+- `weigh`'s heaviest-tools column derives its width from the rows printed, so
+  a 30-character tool name no longer shifts the number column.
+- The median in `scripts/skills-index.mjs` is the true median.
 - `check --mcp` could hang forever on a stdio server. The readiness probes
   cleaned up their spawned servers only on the happy path, so a probe that threw
   left the child's stdin open; the child never saw EOF, never exited, and its
@@ -138,5 +138,4 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
-[Unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.0
