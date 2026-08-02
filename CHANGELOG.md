@@ -4,7 +4,7 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [0.1.1] - unreleased
+## [0.1.1] - 2026-08-02
 
 Everything below was on `main` and unpublished. That gap was itself the
 problem: `efaimo@0.1.0` still tells every user "the spec finalizes
@@ -138,4 +138,5 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[0.1.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.1
 [0.1.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.0

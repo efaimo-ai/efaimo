@@ -144,9 +144,8 @@ how to fix it, each rule naming the SEP it came from. Readiness never drags the
 grade, because the two answer different questions: the grade is what a model
 experiences from this tool surface, readiness is whether a 2026-07-28 client can
 talk to this server. Combining them scored the reference server a C for a tool
-surface that is an A. Pass `--strict-readiness` (**unreleased: on `main`, not
-in `efaimo@0.1.0`**) when you want CI to fail on the
-diff. Full list: [docs/RULES.md](./docs/RULES.md).
+surface that is an A. Pass `--strict-readiness` when you want CI to fail on
+the diff. Full list: [docs/RULES.md](./docs/RULES.md).
 
 <p align="center">
   <img src="assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
@@ -303,7 +302,7 @@ threw and was skipped, so the report is incomplete. It is never scored.
 
 Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
 findings (E101-E118) are reported as an ungraded migration diff, which
-`--strict-readiness` (unreleased; on `main`) can turn into a non-zero exit
+`--strict-readiness` can turn into a non-zero exit
 without touching the grade.
 Every finding carries a stable id you can suppress or link. See
 [docs/RULES.md](./docs/RULES.md).
