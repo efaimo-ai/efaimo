@@ -53,7 +53,7 @@ hygiene. Run it on a folder and every skill gets its own grade, not one aggregat
 **We graded 36 public Agent Skills**: every skill in `anthropics/skills`,
 `anthropics/claude-cookbooks`, and `obra/superpowers`, at pinned commits. 97%
 score an A, but even this curated set has real issues: Anthropic's own
-`claude-api` scores a C with an over-limit description and ~18k-token
+`claude-api` scores a C (73) with an over-limit description and ~18k-token
 instructions, and the median skill's instructions run ~1,632 tokens loaded on
 every trigger. Full report, the corpus manifest, and the two commands that
 reproduce it: [the Skills Quality Index](./research/skills-index/REPORT.md).
