@@ -127,7 +127,7 @@ attached. The default is 20 trials per arm: below roughly that, a partial
 result cannot reach significance at all.
 
 Until 2026-08-02 the rule was `>= +15 points helps`, with a default of 5
-trials. At that size 5/5 against 4/5 is +20 points and p = 1.0000. See ADR-028.
+trials. At that size 5/5 against 4/5 is +20 points and p = 1.0000.
 
 Two things the judge does, which matter for reading a result:
 

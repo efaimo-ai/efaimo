@@ -25,7 +25,7 @@ one:
 
 1. Give it the next free id and a one-line `title`.
 2. Add it to the exported `MCP_RULES` / `SKILL_RULES` array.
-3. Document it in `docs/RULES.md`, a test (`test/meta.test.ts`) fails if any rule
+3. Document it in `docs/RULES.md`; a test (`test/meta.test.ts`) fails if any rule
    id is missing from that file.
 4. If it cites a spec change, link the SEP/PR and verify the wording against the
    primary source (the changelog at modelcontextprotocol.io, not a summary).

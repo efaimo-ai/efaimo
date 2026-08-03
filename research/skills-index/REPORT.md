@@ -53,7 +53,8 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 | `doc-coauthoring` | anthropics-skills | A (99) | 0 | 0 | 1 |
 | `applying-brand-guidelines` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
 | `cookbook-audit` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
-| `writing-plans` | obra-superpowers | A (100) | 0 | 0 | 0 |
+
+The other 25 skills in the corpus all graded A (100) with zero findings.
 
 ## Full corpus
 

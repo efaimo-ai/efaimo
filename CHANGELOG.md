@@ -4,6 +4,29 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Security
+
+- The lockfile was re-resolved so the dev/CI tree carries
+  `@hono/node-server` 2.0.12 instead of the 1.19.x line that
+  GHSA-frvp-7c67-39w9 covers (moderate, path traversal in `serve-static`, in
+  the half of the MCP SDK this CLI never executes). A fresh `npx efaimo`
+  install already resolved the patched line; this aligns the committed tree
+  with what users actually get, and `pnpm audit --prod` is clean again.
+
+### Changed
+
+- `@modelcontextprotocol/sdk` floor moved within-range from ^1.29.0 to ^1.30.0
+  (what a fresh install resolves anyway). All 126 tests pass on the new tree.
+- CI: the reference-server smoke is pinned to
+  `@modelcontextprotocol/server-everything@2026.7.4`. Per-commit CI should be
+  deterministic; news about the reference server's latest belongs to a
+  scheduled run, not to a push.
+- CI: `spec-drift.yml` and the example workflow now pin actions by commit SHA
+  like the other workflows, and the example declares least-privilege
+  `permissions`.
+
 ## [0.1.1] - 2026-08-02
 
 Everything below was on `main` and unpublished. That gap was itself the
@@ -32,7 +55,7 @@ that notices the next revision by itself.
   hostile server could put ESC[1A ESC[2K in a tool name and rewrite the grade
   line printed above its own finding, so the reader saw "grade A (100), 0
   errors" while the contradiction was erased. `--no-color` did not help; that
-  only suppresses colours efaimo adds.
+  only suppresses colors efaimo adds.
 - `.env` loading is restricted to `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`.
   It previously set ANY key from a working-directory `.env`, so a cloned
   repository could set `NODE_TLS_REJECT_UNAUTHORIZED=0` and silently disable
@@ -40,8 +63,8 @@ that notices the next revision by itself.
   key.
 - Skill references that resolve outside the skill directory are no longer read
   by `weigh`. S106 already warned about them, but only after the read.
-- `SKILL.md` is read through the same 512KB-class cap as referenced files
-  (2MB), instead of an uncapped read.
+- `SKILL.md` is read through a capped read (2MB) on the same guarded path that
+  caps referenced files at 512KB, instead of an uncapped read.
 - The published composite Action no longer interpolates its inputs into a bash
   `run:` body, which was script injection in the consumer's runner.
 
@@ -101,7 +124,7 @@ that notices the next revision by itself.
   extend `CacheableResult`, so that surface is required now, is measured now,
   and the message names whichever surface failed.
 
-## [0.1.0]
+## [0.1.0] - 2026-07-18
 
 First release.
 
@@ -138,5 +161,6 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.1.1...HEAD
 [0.1.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.1
 [0.1.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.0

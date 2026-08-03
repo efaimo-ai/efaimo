@@ -35,10 +35,10 @@ jobs:
       # Two were live on 2026-08-02, both in the half of the MCP SDK's tree
       # this CLI never executes (its HTTP server stack: express, hono, cors),
       # and there was no mechanism that could have surfaced them. --audit-level
-      # high, not moderate, on purpose: the remaining moderate needs a MAJOR
-      # bump of a transitive dep of a dependency we do not control, which is a
-      # worse trade than the flaw it fixes for a tool that never starts a
-      # server. A high is a stop.
+      # high, not moderate, on purpose: a moderate confined to code this CLI
+      # never runs is a lockfile-refresh chore (the 2026-08-02 one was cleared
+      # exactly that way on 2026-08-03), not a reason to stop a build. A high
+      # is a stop.
       #
       # Runs once, not per matrix cell: the tree is the same on every OS and
       # Node version, and four identical failures is noise.
@@ -61,9 +61,11 @@ jobs:
         shell: bash
         # Network-dependent (npx cold-download + boot); retry so a slow runner is
         # not a red build. The first attempt warms the npx cache for the rest.
+        # Pinned version: per-commit CI must be deterministic; news about the
+        # reference server's latest belongs to a scheduled run, not to a push.
         run: |
           for i in 1 2 3; do
-            node dist/cli.js weigh "npx -y @modelcontextprotocol/server-everything" --timeout 180 && exit 0
+            node dist/cli.js weigh "npx -y @modelcontextprotocol/server-everything@2026.7.4" --timeout 180 && exit 0
             echo "smoke attempt $i failed; retrying in 5s"; sleep 5
           done
           exit 1

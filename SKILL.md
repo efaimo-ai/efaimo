@@ -26,8 +26,8 @@ you would be willing to run yourself. A remote target (`https://...`) is not
 executed and is the safe option for something you do not trust. `--client`
 reads the MCP config files in the current directory as well as your user
 config, so running it inside a repository you did not write means starting the
-servers that repository configured. This warning lives in `SECURITY.md` and did
-not live here, which is the wrong way round: the policy is where humans look,
+servers that repository configured. Until 2026-08-02 this warning lived only in
+`SECURITY.md`, which was the wrong way round: the policy is where humans look,
 and this file is where agents take orders.
 
 - **Weigh context cost of an MCP server**

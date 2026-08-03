@@ -25,7 +25,7 @@ input:
     URL named in that document. Both are hosts you did not type, taken from
     the target's own response, and both go through the same SSRF guard as the
     target itself;
-  - `\<origin\>/.well-known/mcp` on a remote target;
+  - `<origin>/.well-known/mcp` on a remote target;
   - with `--conformance`, an `npx` fetch of the pinned
     `@modelcontextprotocol/conformance` package from the npm registry;
   - with `--anthropic`, the Anthropic `count_tokens` API using your

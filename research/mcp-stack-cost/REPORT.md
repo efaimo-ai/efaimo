@@ -58,7 +58,7 @@ small server is not automatically a cheap one.
 The whole table, regenerated in one command from the efaimo repo root:
 
 ```bash
-pnpm build && node scripts/stack-cost.mjs ../efaimo-ai/src/data/mcp-stack-cost.json
+pnpm build && node scripts/stack-cost.mjs stack-cost.json
 ```
 
 Or one server at a time:

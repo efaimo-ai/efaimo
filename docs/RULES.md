@@ -22,11 +22,11 @@ rules are heuristics and say so in their detail line.
 
 | id | sev | what it catches | source of truth |
 |---|---|---|---|
-| E101 | warn | depends on a pre-`2026-07-28` SDK line (TS `@modelcontextprotocol/sdk` 1.x, Python `mcp` 1.x) instead of the 2.x stateless line | changelog / SDK releases |
+| E101 | warn | depends on a pre-`2026-07-28` SDK line (TS `@modelcontextprotocol/sdk` 1.x, Python `mcp` 1.x) instead of the stateless successors (TS `@modelcontextprotocol/server` 2.x, Python `mcp` 2.x) | changelog / SDK releases |
 | E102 | warn | source uses **Sampling** (`sampling/createMessage`), deprecated (SEP-2577) | 2026-07-28 changelog |
 | E103 | warn | source uses **Roots** (`roots/list`), deprecated (SEP-2577) | 2026-07-28 changelog |
 | E104 | warn | server declares the **logging** capability or source uses MCP Logging, deprecated (SEP-2577); `logging/setLevel` is removed | 2026-07-28 changelog |
-| E105 | warn | the server does not answer a bare stateless `tools/list` (timeout, crash, or a not-initialized error), so it requires the removed `initialize` handshake. A server that answers (even with an error) is judged by E106/E107/E118 instead | SEP-2567 / stateless core |
+| E105 | warn | the server rejects a bare stateless `tools/list` with a not-initialized error, i.e. it still requires the removed `initialize` handshake. A timeout is reported as unverified statelessness rather than as this warn, and a server that answers (even with another error) is judged by E106/E107/E118 instead | SEP-2567 / stateless core |
 | E106 | warn | `server/discover` is not implemented (MUST in 2026-07-28, SEP-2575) | 2026-07-28 changelog |
 | E107 | info | results omit the required `resultType` field (`"complete"` \| `"input_required"`) | 2026-07-28 changelog |
 | E108 | info | source relies on removed SSE resumability (`Last-Event-ID`) | 2026-07-28 changelog |

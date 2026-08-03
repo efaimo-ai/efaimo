@@ -6,7 +6,7 @@
 // This produces the how-much number, from servers people actually install.
 //
 // Usage (from the efaimo repo root, after `pnpm build`):
-//   node scripts/stack-cost.mjs ../efaimo-ai/src/data/mcp-stack-cost.json
+//   node scripts/stack-cost.mjs stack-cost.json
 //
 // Placeholder credentials are passed where a server wants them. Listing tools
 // does not authenticate, so the manifest -- and therefore its token cost -- is
