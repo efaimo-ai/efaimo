@@ -87,13 +87,18 @@ describe("meta", () => {
     const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
       .split("\n").map((s) => s.trim()).filter(Boolean);
     const TEXT = /\.(md|mjs|cjs|js|ts|tsx|jsx|css|json|jsonc|txt|ya?ml|html|svg|toml)$/;
-    // Extend ONLY for a fixture that must contain the character it tests. Empty
-    // today; a dash in any real file is a bug to fix, not an entry to add here.
-    const EXEMPT = new Set<string>([]);
+    // No-extension text that still ships or is authored, matched by basename.
+    // NOTICE is in package.json's `files`, so it reaches every `npm i`, and
+    // nothing else guarded it; this mirrors the skill guard's own NOEXT set.
+    const NOEXT = new Set(["LICENSE", "NOTICE"]);
+    // Exempt ONLY machine-generated files no human authors (an upstream dep can
+    // put a dash in the lockfile) and, in future, a fixture that must contain
+    // the character it tests. A dash in a real authored file is a bug to fix.
+    const EXEMPT = new Set<string>(["pnpm-lock.yaml"]);
     const offenders: string[] = [];
     let scanned = 0;
     for (const f of tracked) {
-      if (!TEXT.test(f) || EXEMPT.has(f)) continue;
+      if (!(TEXT.test(f) || NOEXT.has(path.basename(f))) || EXEMPT.has(f)) continue;
       scanned++;
       const buf = fs.readFileSync(path.join(root, f));
       for (let i = 0; i < buf.length - 2; i++) {
