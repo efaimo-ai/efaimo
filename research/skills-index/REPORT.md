@@ -111,5 +111,6 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 | `mcp-stateless-migration` | A (100) | 104 | 1,428 | 3 files, 3,690 |
 | `claim-sweep` | A (100) | 110 | 1,115 | 2 files, 2,647 |
 | `red-before-green` | A (100) | 115 | 984 | 2 files, 2,146 |
+| `honest-chart` | A (100) | 103 | 929 | 3 files, 2,391 |
 
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>
