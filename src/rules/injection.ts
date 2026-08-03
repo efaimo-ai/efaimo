@@ -1,10 +1,14 @@
-import type { Finding, Severity } from "../core/types.js";
+import type { Finding } from "../core/types.js";
 import { truncate } from "../util/misc.js";
 
+// No `severity` field: every match is reported as info + graded:false (see
+// scanTextForInjection), on purpose, because these are shallow heuristics that
+// must never move a grade. A per-pattern severity was declared here and never
+// read, which only invited a maintainer to trust a distinction the code does
+// not make.
 interface InjectionPattern {
   key: string;
   re: RegExp;
-  severity: Severity;
   label: string;
 }
 
@@ -18,19 +22,16 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
   {
     key: "override-instructions",
     re: /ignore\s+(?:all\s+|any\s+)?(?:previous|prior|earlier|above)\s+(?:instructions|messages|rules|prompts)/i,
-    severity: "error",
     label: "attempts to override prior instructions",
   },
   {
     key: "hide-from-user",
     re: /do\s+not\s+(?:tell|reveal|mention|inform|show|disclose)\b[\s\S]{0,40}\b(?:user|human|operator)/i,
-    severity: "error",
     label: "instructs the agent to hide behavior from the user",
   },
   {
     key: "act-without-consent",
     re: /without\s+(?:telling|asking|notifying|informing)\s+(?:the\s+)?(?:user|human)/i,
-    severity: "error",
     label: "instructs the agent to act without user consent",
   },
   {
@@ -38,51 +39,43 @@ export const INJECTION_PATTERNS: InjectionPattern[] = [
     // "post" and "token" dropped: they match API documentation ("Token counting
     // POST /v1/...") far more than exfiltration.
     re: /\b(?:api[_-]?key|secret|password|credential)s?\b[\s\S]{0,40}\b(?:send|forward|exfiltrat|upload|leak|transmit|include\s+it)\b/i,
-    severity: "error",
     label: "references sending credentials or secrets somewhere",
   },
   {
     key: "sensitive-file-read",
     re: /\b(?:read|open|cat|print|upload)\b[\s\S]{0,40}(?:\.env\b|\.ssh\b|id_rsa|credentials|\.aws\b|\.npmrc\b)/i,
-    severity: "error",
     label: "references reading sensitive local files",
   },
   {
     key: "disable-safety",
     re: /\b(?:disable|bypass|ignore|remove)\s+(?:safety|guardrails?|filters?|restrictions?|policy|policies)\b/i,
-    severity: "error",
     label: "asks to bypass safety or policy",
   },
   {
     key: "cross-tool-steering",
     re: /before\s+(?:using|calling|running)\b[^.?!]{0,40}?\btools?\b[\s,]{1,4}(?:always\s+|first\s+|please\s+)?(?:call|run|use|fetch|invoke)\b/i,
-    severity: "warn",
     label: "steers the agent to call another tool first (cross-tool steering)",
   },
   {
     key: "templated-exfil-url",
     // Bounded runs (no adjacent unbounded same-class quantifiers) to avoid ReDoS.
     re: /https?:\/\/[^\s"'<>]{1,150}[?&][^\s"'<>]{0,150}(?:\$\{[^}]{1,60}\}|\{\{[^}]{1,60}\}\}|\{[^}]{1,60}\})/,
-    severity: "warn",
     label: "URL with a templated query parameter (possible exfiltration channel)",
   },
   {
     key: "zero-width-chars",
     // eslint-disable-next-line no-control-regex
     re: /[​‌‍⁠﻿]/,
-    severity: "warn",
     label: "zero-width or invisible characters present",
   },
   {
     key: "hidden-html-comment",
     re: /<!--[^>]{0,240}\b(?:must|always|never|call|run|fetch|send|ignore)\b[^>]{0,240}-->/i,
-    severity: "warn",
     label: "HTML comment containing imperative instructions (hidden from rendered view)",
   },
   {
     key: "persona-override",
     re: /\byou\s+are\s+now\b|\bpretend\s+to\s+be\b|\bnew\s+system\s+prompt\b/i,
-    severity: "warn",
     label: "persona or system-prompt override language",
   },
 ];

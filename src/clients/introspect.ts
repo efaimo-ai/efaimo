@@ -37,13 +37,21 @@ export async function introspectServer(
       stderr: "pipe",
     });
     transport = stdio;
+    // Split the budget across the two attempts so a dead server fails in about
+    // one timeout, not two: the legacy handshake got the whole timeout AND the
+    // stateless fallback then re-waited the whole timeout again, so `--timeout 8`
+    // took ~16s wall. The handshake takes the larger share; the fallback gets
+    // what is left, with a floor so a genuinely stateless server still has time
+    // to answer a bare request.
+    const startedAt = Date.now();
     try {
-      await withTimeout(client.connect(stdio), timeoutMs, "connect (stdio)");
+      await withTimeout(client.connect(stdio), Math.max(1, Math.round(timeoutMs * 0.6)), "connect (stdio)");
     } catch (e) {
       await safeClose(client, stdio);
       // A 2026-07-28 stateless server has no initialize, so the SDK handshake
       // fails by design; try bare stateless requests before giving up.
-      const rc = await introspectStateless(target, { timeoutMs });
+      const remaining = Math.max(timeoutMs - (Date.now() - startedAt), Math.round(timeoutMs * 0.25));
+      const rc = await introspectStateless(target, { timeoutMs: remaining });
       if (rc) return rc;
       throw connectError(e, target.label, stderrTail);
     }

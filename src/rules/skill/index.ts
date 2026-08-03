@@ -22,7 +22,10 @@ const s101: SkillRule = {
 
     if (skill.parseError) {
       push("error", `${skill.file}: ${skill.parseError}`, "SKILL.md must start with a --- YAML frontmatter block");
-      if (!skill.frontmatterRaw) return findings;
+      // No early return on empty frontmatter. Returning here after one error let
+      // a skill with NO frontmatter grade higher than one with BROKEN frontmatter
+      // (the required-field checks below never ran), so total absence outscored a
+      // typo by two errors. Absent fields ARE missing fields; report them too.
     }
     const name = skill.frontmatter.name;
     if (typeof name !== "string" || !name.trim()) {
@@ -259,7 +262,7 @@ const s106: SkillRule = {
           target: label,
           fixHint: "agents will fail mid-task when they try to open it",
         });
-      } else if (ref.raw.includes("..")) {
+      } else if (ref.escapes) {
         findings.push({
           ruleId: "S106",
           severity: "warn",

@@ -71,6 +71,16 @@ export async function checkMcpTarget(
 
 export function checkMcpRepoOnly(repoPath: string, label: string): CheckReport {
   const repo = scanRepo(repoPath);
+  // An empty result is a failure, never a pass. With no source files read and no
+  // dependency manifest naming an MCP SDK, there was nothing to examine here, and
+  // a clean A(100) would be a grade for a directory we never looked inside. Fail
+  // loudly, the way checkSkillSet does for a missing SKILL.md.
+  if (repo.filesScanned === 0 && !repo.sdk) {
+    throw new Error(
+      `no MCP server source found under "${repoPath}": no code files and no SDK dependency. ` +
+        `Point --mcp at the server's run command, or at a directory that contains its source.`,
+    );
+  }
   const emptyIntro: ServerIntrospection = {
     targetLabel: label,
     transport: "stdio",

@@ -1,6 +1,6 @@
 {
   "name": "efaimo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Audit what your agent loads: quality and context cost for MCP servers and Agent Skills",
   "keywords": [
     "mcp",

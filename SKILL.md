@@ -3,7 +3,7 @@ name: efaimo
 description: Audit MCP servers and Agent Skills for quality and context-window cost. Use when the user wants to check an MCP server's token cost, lint a skill, verify 2026-07-28 MCP spec readiness, or add an efaimo badge or CI gate.
 license: Apache-2.0
 metadata:
-  version: "0.1.1"
+  version: "0.1.2"
   homepage: "https://efaimo.ai"
 ---
 

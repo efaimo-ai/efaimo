@@ -26,7 +26,7 @@ rules are heuristics and say so in their detail line.
 | E102 | warn | source uses **Sampling** (`sampling/createMessage`), deprecated (SEP-2577) | 2026-07-28 changelog |
 | E103 | warn | source uses **Roots** (`roots/list`), deprecated (SEP-2577) | 2026-07-28 changelog |
 | E104 | warn | server declares the **logging** capability or source uses MCP Logging, deprecated (SEP-2577); `logging/setLevel` is removed | 2026-07-28 changelog |
-| E105 | warn | the server rejects a bare stateless `tools/list` with a not-initialized error, i.e. it still requires the removed `initialize` handshake. A timeout is reported as unverified statelessness rather than as this warn, and a server that answers (even with another error) is judged by E106/E107/E118 instead | SEP-2567 / stateless core |
+| E105 | warn | the server rejects a bare stateless `tools/list` with a not-initialized error, or exits on it, so it still requires the removed `initialize` handshake. A timeout is reported as unverified statelessness rather than as this warn, and a server that answers (even with another error) is judged by E106/E107/E118 instead | SEP-2567 / stateless core |
 | E106 | warn | `server/discover` is not implemented (MUST in 2026-07-28, SEP-2575) | 2026-07-28 changelog |
 | E107 | info | results omit the required `resultType` field (`"complete"` \| `"input_required"`) | 2026-07-28 changelog |
 | E108 | info | source relies on removed SSE resumability (`Last-Event-ID`) | 2026-07-28 changelog |

@@ -4,7 +4,43 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.2] - 2026-08-03
+
+The 0.1.2 code backlog: edge-case fixes surfaced by the five-agent review, none
+of which changes a published number or the documented command surface, plus the
+security and CI hardening already staged.
+
+### Fixed
+
+- `check --mcp <directory>` with no source files and no MCP SDK dependency now
+  fails instead of returning a clean A(100): an empty scan is a failure, never a
+  pass.
+- S101: a skill with no frontmatter reports its missing `name` and `description`
+  as errors, so a total absence no longer grades higher than a broken one.
+- E105: a server that exits on a bare stateless `tools/list` is flagged. The
+  crash outcome was unhandled, so a crashing server looked more migrated than
+  one that answers with a not-initialized error.
+- E124: the "N of M parameters lack descriptions" summary is no longer dropped
+  by the display cap on schemas with five or more oversized enums.
+- S106: the escape check is lexical (the resolved path), not a `..` substring,
+  so a file merely named `notes..md` is not flagged as escaping.
+- A Poetry `mcp = "^2.0"` constraint in `pyproject.toml` is read as the 2.x
+  line, not legacy; the version regex had captured the `=` assignment.
+- `weigh --diff` with a skill baseline fails with a clear message instead of a
+  raw TypeError; a server baseline is required.
+- `--max-tokens` and `--allow-increase` reject non-positive / negative values
+  instead of turning the gate into an always-fail with a nonsense message.
+- `efaimo test --live` against an OpenAI o-series reasoning model no longer
+  sends an unsupported `temperature` (a 400) and gives it token headroom.
+- The live test harness retries a transient 429 or 5xx with backoff instead of
+  discarding every already-paid trial on the first blip.
+- The test report prints a clean note instead of "95% interval NaN to NaN" when
+  an arm produces no scoreable trial.
+- A dead stdio target fails in about one `--timeout`, not two: the legacy
+  handshake and the stateless fallback now share the budget.
+- Internal: dropped a dead exported constant and the unused per-pattern
+  `severity` on the injection heuristics (every hit is info + ungraded by
+  design).
 
 ### Security
 
@@ -18,7 +54,7 @@ All notable changes to efaimo are documented here. Format follows
 ### Changed
 
 - `@modelcontextprotocol/sdk` floor moved within-range from ^1.29.0 to ^1.30.0
-  (what a fresh install resolves anyway). All 126 tests pass on the new tree.
+  (what a fresh install resolves anyway). The full suite (136 tests) is green.
 - CI: the reference-server smoke is pinned to
   `@modelcontextprotocol/server-everything@2026.7.4`. Per-commit CI should be
   deterministic; news about the reference server's latest belongs to a
@@ -161,6 +197,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
-[unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.1.1...HEAD
+[unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.2
 [0.1.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.1
 [0.1.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.0

@@ -100,10 +100,20 @@ function seconds(value: string, label = "--timeout"): number {
   return n;
 }
 
-function parseNumberOpt(value: string | undefined, label: string): number | undefined {
+function parseNumberOpt(
+  value: string | undefined,
+  label: string,
+  bound?: { min: number; exclusive?: boolean },
+): number | undefined {
   if (value === undefined) return undefined;
   const n = Number(value);
   if (!Number.isFinite(n)) fail(`${label} must be a number, got "${value}"`);
+  // A budget or a percentage below its floor is not a stricter gate, it is a
+  // nonsensical one: `--max-tokens -5` turned "over budget" into always-true
+  // with a negative ceiling in the message. Reject it at the boundary.
+  if (bound && (bound.exclusive ? n <= bound.min : n < bound.min)) {
+    fail(`${label} must be ${bound.exclusive ? "greater than" : "at least"} ${bound.min}, got "${value}"`);
+  }
   return n;
 }
 
@@ -158,8 +168,8 @@ program
     colorSetup(opts);
     windowSetup(opts);
     const timeoutMs = seconds(opts.timeout) * 1000;
-    const maxTokens = parseNumberOpt(opts.maxTokens, "--max-tokens");
-    const allowIncreasePct = parseNumberOpt(opts.allowIncrease, "--allow-increase");
+    const maxTokens = parseNumberOpt(opts.maxTokens, "--max-tokens", { min: 0, exclusive: true });
+    const allowIncreasePct = parseNumberOpt(opts.allowIncrease, "--allow-increase", { min: 0 });
     const anthropic = anthropicKeyFor(opts);
 
     const targets: ResolvedTarget[] = [];
@@ -295,7 +305,14 @@ program
       if (!single || single.kind !== "mcp") fail("--diff works on a single MCP server result");
       const baselineRaw = JSON.parse(fs.readFileSync(opts.diff, "utf8")) as { data?: ServerWeighResult } | ServerWeighResult;
       const baseline = ("data" in baselineRaw && baselineRaw.data ? baselineRaw.data : baselineRaw) as ServerWeighResult;
-      if (!baseline?.totals) fail(`"${opts.diff}" is not a weigh baseline (write one with --out)`);
+      // A skill weigh baseline also carries a `totals` object, so a bare
+      // truthiness check passed it through and diffServerWeigh then died on the
+      // missing tool array with a raw TypeError. A server baseline is the one
+      // whose totals hold the three serializations; require the Claude-style
+      // total specifically so a skill baseline is rejected with a clear message.
+      if (!baseline?.totals || typeof baseline.totals.claudeStyle !== "number") {
+        fail(`"${opts.diff}" is not an MCP server weigh baseline; write one with: efaimo weigh <server> --out ${opts.diff}`);
+      }
       const d = diffServerWeigh(baseline, single);
       console.log("");
       console.log(opts.md ? renderDiffMarkdown(d) : renderDiffPretty(d, { maxTokens, allowIncreasePct }));

@@ -194,6 +194,23 @@ const e105: McpRule = {
         },
       ];
     }
+    if (bare.kind === "exit") {
+      // A crash on the bare request is not a timeout and not a clean answer: the
+      // server did not serve a stateless tools/list, so a 2026-07-28 client
+      // cannot talk to it. Left unhandled, this outcome produced NO finding, so
+      // a crashing server looked one item MORE migrated than one that answers
+      // with a not-initialized error.
+      return [
+        {
+          ruleId: "E105",
+          severity: "warn",
+          title: "requires the removed initialize handshake",
+          message: `the server process exited on a bare stateless tools/list (${bare.errorMessage ?? "no reply"}), so it does not answer requests without a prior initialize`,
+          detail: `${SPEC} removes initialize and sessions; a server that exits on a bare request cannot serve a ${SPEC} client. A server that answers, even with an error, is judged by E106/E107/E118 instead.`,
+          fixHint: "upgrade to a 2.x SDK, or answer requests without a prior initialize instead of exiting",
+        },
+      ];
+    }
     if (bare.kind === "timeout") {
       return [
         {
@@ -558,7 +575,10 @@ const e124: McpRule = {
       }
     }
     if (totalParams > 5 && undocumented / totalParams > 0.3) {
-      findings.push({
+      // Prepend, not append: capList keeps the first 5, and on the worst schemas
+      // (5+ oversized enums) an appended summary was exactly the line that got
+      // dropped. The aggregate is the headline, so it leads.
+      findings.unshift({
         ruleId: "E124",
         severity: "warn",
         title: "schema issues",

@@ -136,6 +136,34 @@ async function judgeOne(runner: Runner, scenario: Scenario, answer: string): Pro
   return "unparseable";
 }
 
+// A live run makes trials * 2 arms * 2 (answer + judge) API calls. One
+// transient 429 or 5xx among them used to throw and discard every trial already
+// paid for. Retry the transient failures with backoff; a non-429 4xx (bad key,
+// unknown model) is a real error and is not retried.
+function isTransient(err: unknown): boolean {
+  const m = String((err as { message?: unknown })?.message ?? err);
+  return (
+    /\b(429|500|502|503|504)\b/.test(m) ||
+    /timeout|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|network/i.test(m)
+  );
+}
+
+export function withRetry(runner: Runner, tries = 4, baseDelayMs = 500): Runner {
+  return async (req) => {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < tries; attempt++) {
+      try {
+        return await runner(req);
+      } catch (e) {
+        lastErr = e;
+        if (attempt === tries - 1 || !isTransient(e)) throw e;
+        await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** attempt));
+      }
+    }
+    throw lastErr;
+  };
+}
+
 async function runArm(runner: Runner, scenario: Scenario, system: string | undefined): Promise<ArmResult> {
   let passes = 0;
   let unparseable = 0;
@@ -159,8 +187,11 @@ async function runArm(runner: Runner, scenario: Scenario, system: string | undef
 
 export async function runScenario(scenario: Scenario, runner: Runner): Promise<TestReport> {
   const systems = armSystems(scenario);
-  const withoutSkill = await runArm(runner, scenario, systems.withoutSkill);
-  const withSkill = await runArm(runner, scenario, systems.withSkill);
+  // Wrap once so both the subject answers and the judge calls survive a
+  // transient blip instead of throwing away the whole (paid-for) scenario.
+  const r = withRetry(runner);
+  const withoutSkill = await runArm(r, scenario, systems.withoutSkill);
+  const withSkill = await runArm(r, scenario, systems.withSkill);
   const deltaPoints = Math.round((withSkill.passRate - withoutSkill.passRate) * 10) / 10;
 
   // The verdict is a significance test, not a threshold on the gap.
@@ -180,9 +211,14 @@ export async function runScenario(scenario: Scenario, runner: Runner): Promise<T
     withoutSkill.passes, withoutSkill.scored,
   );
 
+  // With no scoreable trial in an arm the pass rate and its interval are
+  // 0/0 = NaN; say so plainly instead of printing "NaN to NaN points".
+  const bothScored = withSkill.scored > 0 && withoutSkill.scored > 0;
   const notes: string[] = [
-    `${scenario.trials} trials per arm. Two-sided Fisher exact p = ${p < 0.0001 ? "<0.0001" : p.toFixed(4)}; ` +
-      `95% interval on the delta ${ci.lo >= 0 ? "+" : ""}${ci.lo} to ${ci.hi >= 0 ? "+" : ""}${ci.hi} points.`,
+    bothScored
+      ? `${scenario.trials} trials per arm. Two-sided Fisher exact p = ${p < 0.0001 ? "<0.0001" : p.toFixed(4)}; ` +
+        `95% interval on the delta ${ci.lo >= 0 ? "+" : ""}${ci.lo} to ${ci.hi >= 0 ? "+" : ""}${ci.hi} points.`
+      : `${scenario.trials} trials per arm. An arm produced no scoreable trial, so no p-value or delta interval can be computed.`,
   ];
   const unscored = withSkill.unparseable + withoutSkill.unparseable;
   if (unscored) {

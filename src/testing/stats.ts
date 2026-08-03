@@ -98,6 +98,3 @@ export function deltaInterval(
   const hi = d + Math.sqrt((w.hi - p1) ** 2 + (p2 - o.lo) ** 2);
   return { lo: Math.round(Math.max(-1, lo) * 1000) / 10, hi: Math.round(Math.min(1, hi) * 1000) / 10 };
 }
-
-/** The smallest per-arm trial count at which a total separation (n/n vs 0/n) reaches p < 0.05. */
-export const MIN_TRIALS_FOR_SIGNIFICANCE = 4;

@@ -9,20 +9,26 @@ export function openaiRunner(apiKey: string): Runner {
     const messages: { role: string; content: string }[] = [];
     if (req.system) messages.push({ role: "system", content: req.system });
     messages.push({ role: "user", content: req.user });
+    // o-series reasoning models (o1, o3, o4, ...) reject any non-default
+    // temperature with a 400, and a chat-sized 1024 cap starves them: their
+    // hidden reasoning tokens count against max_completion_tokens, so a small
+    // cap can return empty content. So omit temperature and give them headroom.
+    const isReasoning = /^o[0-9]/i.test(req.model);
+    const body: Record<string, unknown> = {
+      model: req.model,
+      messages,
+      max_completion_tokens: isReasoning ? 8192 : 1024,
+    };
+    // temperature: 0 for the judge, 1 for the subject (see
+    // RunnerRequest.deterministic), but only where the model accepts it.
+    if (!isReasoning) body.temperature = req.deterministic ? 0 : 1;
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`,
       },
-      // temperature: 0 for the judge, 1 for the subject. See
-      // RunnerRequest.deterministic in harness.ts.
-      body: JSON.stringify({
-        model: req.model,
-        temperature: req.deterministic ? 0 : 1,
-        messages,
-        max_completion_tokens: 1024,
-      }),
+      body: JSON.stringify(body),
       redirect: "error",
       signal: AbortSignal.timeout(60000),
     });
