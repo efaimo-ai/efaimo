@@ -61,10 +61,10 @@ page; releases cut by the workflow are `github-actions[bot]`.
    notes verbatim.
 2. Bump `version` in `package.json` and `src/version.ts` (a test fails if the
    two disagree).
-3. Commit, then push the tag:
+3. Commit, then push the branch and the tag:
 
 ```bash
-git tag vx.y.z && git push origin vx.y.z
+git tag vx.y.z && git push origin main vx.y.z
 ```
 
 `.github/workflows/release.yml` takes it from there: typecheck, build, test,
