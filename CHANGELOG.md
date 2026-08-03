@@ -137,7 +137,7 @@ First release.
   broken or auth-gated server is skipped with a reason, not fatal.
   `--out`/`--diff`/`--max-tokens`/`--allow-increase` for CI budget gates,
   `--badge` for a shields endpoint.
-- `efaimo check --mcp`: a quality grade (E121-E130: descriptions, schemas,
+- `efaimo check --mcp`: a quality grade (E121-E128, E130: descriptions, schemas,
   annotations, cost) plus a separate, ungraded 2026-07-28 migration diff
   (E101-E118: what the stateless spec breaks and how to fix it, each item naming
   its SEP). Speaks both the legacy handshake and bare stateless requests, so
