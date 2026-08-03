@@ -107,8 +107,8 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 
 | skill | grade | metadata | body | referenced |
 |---|---|---|---|---|
-| `efaimo` | A (100) | 58 | 813 | 0 files, 0 |
-| `mcp-stateless-migration` | A (100) | 104 | 1,397 | 3 files, 3,685 |
-| `claim-sweep` | A (100) | 110 | 1,115 | 2 files, 2,581 |
+| `efaimo` | A (100) | 58 | 816 | 0 files, 0 |
+| `mcp-stateless-migration` | A (100) | 104 | 1,428 | 3 files, 3,690 |
+| `claim-sweep` | A (100) | 110 | 1,115 | 2 files, 2,647 |
 
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>

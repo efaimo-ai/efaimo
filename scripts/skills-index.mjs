@@ -155,7 +155,11 @@ const medianMeta = median(ok.map((r) => r.meta));
 const ruleFreq = {};
 for (const r of ok) for (const id of new Set(r.ruleIds)) ruleFreq[id] = (ruleFreq[id] ?? 0) + 1;
 const topRules = Object.entries(ruleFreq).sort((a, b) => b[1] - a[1]).slice(0, 8);
-const worst = [...ok].sort((a, b) => a.grade.score - b.grade.score).slice(0, 12);
+// Only rows that actually scored below perfect: a fixed slice(0, 12) used to
+// pad the "lowest-graded" table with an A (100) tie once the corpus had fewer
+// than 12 imperfect skills, presenting a perfect score as one of the worst.
+const below = ok.filter((r) => r.grade.score < 100);
+const worst = [...below].sort((a, b) => a.grade.score - b.grade.score).slice(0, 12);
 const pct = (x) => `${Math.round((x / n) * 100)}%`;
 
 const L = [];
@@ -198,6 +202,12 @@ L.push("");
 L.push("| skill | source | grade | errors | warnings | info |");
 L.push("|---|---|---|---|---|---|");
 for (const r of worst) L.push(`| \`${r.name}\` | ${r.source} | ${r.grade.letter} (${r.grade.score}) | ${r.counts.error} | ${r.counts.warn} | ${r.counts.info} |`);
+L.push("");
+if (below.length <= 12) {
+  L.push(`The other ${n - below.length} skills in the corpus all graded A (100) with zero findings.`);
+} else {
+  L.push(`${below.length - 12} more skills score below A (100); the full corpus below has every row.`);
+}
 L.push("");
 L.push("## Full corpus");
 L.push("");
