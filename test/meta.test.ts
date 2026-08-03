@@ -74,6 +74,41 @@ describe("meta", () => {
     expect(scanned, "scanned no files, so this proves nothing").toBeGreaterThan(5);
     expect(offenders).toEqual([]);
   });
+
+  // House rule, everywhere in this project: ASCII hyphen only, no em (U+2014) or
+  // en (U+2013) dash, in copy, in comments that ship, in CSS, in the run
+  // captures the site quotes. The site enforces it in gates.mjs and the router
+  // in check-orientation, but the CLI's own tree had no guard, so a dash in a
+  // source comment or a doc could ship unnoticed. Tracked files only: a fresh
+  // clone has no skills-index corpus (gitignored, and full of other people's
+  // dashes), so this checks exactly what this repo versions. Bytes, not a regex
+  // on a decoded string, because the decode is where a byte check goes blind.
+  it("no em or en dash in tracked text (ASCII hyphen only)", () => {
+    const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
+      .split("\n").map((s) => s.trim()).filter(Boolean);
+    const TEXT = /\.(md|mjs|cjs|js|ts|tsx|jsx|css|json|jsonc|txt|ya?ml|html|svg|toml)$/;
+    // Extend ONLY for a fixture that must contain the character it tests. Empty
+    // today; a dash in any real file is a bug to fix, not an entry to add here.
+    const EXEMPT = new Set<string>([]);
+    const offenders: string[] = [];
+    let scanned = 0;
+    for (const f of tracked) {
+      if (!TEXT.test(f) || EXEMPT.has(f)) continue;
+      scanned++;
+      const buf = fs.readFileSync(path.join(root, f));
+      for (let i = 0; i < buf.length - 2; i++) {
+        if (buf[i] === 0xe2 && buf[i + 1] === 0x80 && (buf[i + 2] === 0x94 || buf[i + 2] === 0x93)) {
+          const line = buf.subarray(0, i).toString("utf8").split("\n").length;
+          offenders.push(`${f}:${line} has an ${buf[i + 2] === 0x94 ? "em" : "en"} dash`);
+          break; // one hit per file is enough to fail and locate it
+        }
+      }
+    }
+    // Empty harvest is a failure: if ls-files or the filter stops matching, the
+    // guard stops guarding while still reporting green.
+    expect(scanned, "scanned no text files, so this proves nothing").toBeGreaterThan(20);
+    expect(offenders, "ASCII hyphen only; replace these with a hyphen").toEqual([]);
+  });
 });
 
 describe("grade", () => {
