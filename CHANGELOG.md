@@ -4,6 +4,71 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - unreleased
+
+`main` is 0.2.0 and npm is 0.1.2, so they are different software until this
+publishes. Every doc line describing something in this section is annotated
+`(unreleased)` inline, per ADR-029. Replace the date above when the tag is cut.
+
+### Added
+
+- **`efaimo find`**: does anything actually surface these tools? A host can
+  mark tools `defer_loading: true`, which keeps their definitions out of the
+  context window until a search returns them, and Anthropic recommends that
+  once definitions pass ~10k tokens. Under deferral a tool nothing surfaces
+  costs no context and provides no capability. Two numbers, offline and
+  deterministic, no API key:
+  - `distinct`, the headline: how many tools own a term no other tool in the
+    catalog has. A tool with none cannot be matched by any query that does not
+    also match a competitor, which follows from the index rather than from a
+    model of how anyone searches. Measured on `@playwright/mcp` 0.0.78: 22 of
+    24, with `browser_close` and `browser_navigate` owning nothing.
+  - `probe`, secondary and labelled: a simulated BM25 search over the four
+    fields the tool search documentation names as searchable. It reads 100% on
+    both the official reference server and playwright, so the output says on
+    the page that it is a floor test and not a ranking.
+  - New ungraded rule family E141-E145, `--min-distinct` as the CI gate,
+    `--top` to change the simulated result window, `--json` / `--md`.
+    Reasoning in ADR-030; method and its limits in docs/METHODOLOGY.md.
+- `rulesVersion` in every JSON envelope, because the tool version does not
+  identify a ruleset: a patch release can change what a rule fires on, and a
+  published grade is only reproducible next to the rules that produced it. The
+  rule inventory is pinned by a test (ADR-032).
+- `--judge-model` and scenario key `judge_model` for `efaimo test`, so the
+  model under test no longer has to grade its own answers. Subject and judge
+  are routed independently and may be different providers.
+- `--no-timestamp` on `weigh`, `check` and `find`.
+
+### Fixed
+
+- **`efaimo test --live` could not run on its own default model.** The runner
+  sent `temperature` on every request, and Claude removed sampling parameters
+  from the 4.7 line onward, so `claude-sonnet-5` rejected the first call with a
+  400 that is correctly not retried. Sampling parameters now go only to models
+  that still accept them, the request body is a pure function with a test
+  against it, and where the judge cannot be pinned the report says so instead
+  of implying a determinism it does not have. ADR-031.
+- `efaimo test` reports a Fisher exact p on the **unparseable** counts as well
+  as on the passes, and calls a run `inconclusive` when the excluded trials are
+  skewed across the arms: two pass rates computed over different populations
+  cannot be subtracted.
+- `--anthropic` names the model it measured against, in the output and in the
+  JSON. Claude model lines do not share a tokenizer, so a count without its
+  model cannot be reproduced. This is the rule `--window` already followed for
+  the context-window denominator.
+- `weigh --out` no longer writes `generatedAt` into the baseline. A baseline
+  exists to be compared against, and a field that differs on every write is the
+  one field a comparison must ignore.
+
+### Changed
+
+- docs/RULES.md now cites Anthropic's tool search documentation for E125's
+  lower threshold, which previously carried no source at all (the MCP quality
+  table has never had a source column). The thresholds themselves are
+  unchanged, and the citation covers the 30 boundary only: Anthropic writes
+  that tool selection "degrades once you exceed 30-50 available tools", which
+  says nothing about the 60 boundary, and the table says so.
+
 ## [0.1.2] - 2026-08-03
 
 The 0.1.2 code backlog: edge-case fixes surfaced by the five-agent review, none

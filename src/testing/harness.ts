@@ -17,6 +17,24 @@ export interface Scenario {
   skillName: string;
   skillBody: string;
   model: string;
+  /**
+   * The model that grades the attempts. Defaults to `model`, which is what it
+   * always was, and that default is a known confound: a model grading its own
+   * output prefers it, so an effect measured that way is partly a measurement
+   * of self-preference. Set it to a different model (`judge_model:` in the
+   * scenario, or `--judge-model`) and the report prints both.
+   */
+  judgeModel: string;
+  /**
+   * Whether `judge_model:` was written in the scenario.
+   *
+   * `--model` moves the judge with the subject only when the judge was never
+   * pinned. Without this flag the two cases are indistinguishable: a scenario
+   * that deliberately pins `judge_model` to the same id as `model` looked
+   * identical to one that omitted the key, so `--model gpt-4o-mini` would have
+   * moved a deliberately pinned judge.
+   */
+  judgeModelExplicit: boolean;
   trials: number;
   task: string;
   judge: string;
@@ -54,12 +72,23 @@ export interface TestReport {
   scenario: string;
   skill: string;
   model: string;
+  judgeModel: string;
   withSkill: ArmResult;
   withoutSkill: ArmResult;
   /** withSkill.passRate - withoutSkill.passRate, in percentage points. */
   deltaPoints: number;
   /** Two-sided Fisher exact p on the 2x2 of scored trials. */
   p: number;
+  /**
+   * Two-sided Fisher exact p on the 2x2 of UNPARSEABLE trials.
+   *
+   * Dropping a trial the judge did not answer is only unbiased if the dropping
+   * is unrelated to which arm produced it. If one arm loses materially more
+   * trials than the other, the surviving denominators are not comparable and
+   * the delta is measuring the judge as much as the skill. Low p here means
+   * the exclusions are skewed.
+   */
+  unparseableSkewP: number;
   /** 95% interval on the delta, in percentage points (Newcombe). */
   ci: { lo: number; hi: number };
   verdict: "helps" | "hurts" | "no measurable effect" | "inconclusive";
@@ -92,12 +121,16 @@ export function parseScenario(file: string): Scenario {
   // outcome that reaches p < 0.05, so every partial result is uninterpretable
   // and the old default guaranteed a verdict nobody could stand behind.
   const trials = Math.min(50, Math.max(1, Math.round(num(doc.trials) ?? 20)));
+  const model = str(doc.model) ?? "claude-sonnet-5";
+  const judgeModel = str(doc.judge_model);
   return {
     name,
     skillPath,
     skillName: skill.name ?? path.basename(skill.dir),
     skillBody: skill.body.trim(),
-    model: str(doc.model) ?? "claude-sonnet-5",
+    model,
+    judgeModel: judgeModel ?? model,
+    judgeModelExplicit: judgeModel !== undefined,
     trials,
     task,
     judge,
@@ -126,7 +159,7 @@ async function judgeOne(runner: Runner, scenario: Scenario, answer: string): Pro
   const out = await runner({
     system: JUDGE_SYSTEM,
     user: `TASK:\n${scenario.task}\n\nRUBRIC:\n${scenario.judge}\n\nASSISTANT ANSWER:\n${answer}\n\nVerdict (PASS or FAIL):`,
-    model: scenario.model,
+    model: scenario.judgeModel,
     deterministic: true,
   });
   const saysPass = /\bpass(ed|es)?\b/i.test(out);
@@ -185,7 +218,11 @@ async function runArm(runner: Runner, scenario: Scenario, system: string | undef
   };
 }
 
-export async function runScenario(scenario: Scenario, runner: Runner): Promise<TestReport> {
+export async function runScenario(
+  scenario: Scenario,
+  runner: Runner,
+  opts: { extraNotes?: string[] } = {},
+): Promise<TestReport> {
   const systems = armSystems(scenario);
   // Wrap once so both the subject answers and the judge calls survive a
   // transient blip instead of throwing away the whole (paid-for) scenario.
@@ -227,10 +264,32 @@ export async function runScenario(scenario: Scenario, runner: Runner): Promise<T
     );
   }
 
+  // Excluding a trial the judge did not answer is the right call, and it is
+  // unbiased only while the exclusions fall on both arms alike. They need not:
+  // a skill that makes answers longer, or hedged, or formatted differently can
+  // make the judge hedge too, and then one arm quietly loses more trials than
+  // the other and the two surviving pass rates are rates over different things.
+  // Tested with the same statistic and the same threshold used for the effect
+  // itself, so there is one standard of evidence in this report, not two.
+  const unparseableSkewP = fisherExactTwoSided(
+    withSkill.unparseable, withSkill.trials,
+    withoutSkill.unparseable, withoutSkill.trials,
+  );
+  const exclusionsAreSkewed = unscored > 0 && unparseableSkewP < 0.05;
+
   let verdict: TestReport["verdict"];
   if (withSkill.scored === 0 || withoutSkill.scored === 0) {
     verdict = "inconclusive";
     notes.push("an arm produced no scoreable trial; there is nothing to compare.");
+  } else if (exclusionsAreSkewed) {
+    verdict = "inconclusive";
+    notes.push(
+      `the judge failed to answer on ${withSkill.unparseable} of ${withSkill.trials} with-skill trials and ` +
+        `${withoutSkill.unparseable} of ${withoutSkill.trials} without-skill trials, a difference this size at ` +
+        `p = ${unparseableSkewP < 0.0001 ? "<0.0001" : unparseableSkewP.toFixed(4)}. The excluded trials are not ` +
+        `spread evenly across the arms, so the two pass rates are computed over different populations and the ` +
+        `delta cannot be attributed to the skill. Tighten the rubric so the judge always answers, then re-run.`,
+    );
   } else if (p >= 0.05) {
     verdict = "no measurable effect";
     if (Math.abs(deltaPoints) >= 15) {
@@ -242,14 +301,18 @@ export async function runScenario(scenario: Scenario, runner: Runner): Promise<T
   } else if (deltaPoints > 0) verdict = "helps";
   else verdict = "hurts";
 
+  if (opts.extraNotes?.length) notes.push(...opts.extraNotes);
+
   return {
     scenario: scenario.name,
     skill: scenario.skillName,
     model: scenario.model,
+    judgeModel: scenario.judgeModel,
     withSkill,
     withoutSkill,
     deltaPoints,
     p,
+    unparseableSkewP,
     ci,
     verdict,
     notes,

@@ -13,9 +13,13 @@ import { findSkills } from "./skills/parse.js";
 import { diffServerWeigh } from "./weigh/diff.js";
 import { DEFAULT_CONTEXT_WINDOW, formatWindowShare, setContextWindow } from "./weigh/window.js";
 import { checkMcpRepoOnly, checkMcpTarget, checkSkillSet, type CheckSkillResult } from "./check/check.js";
+import { analyzeFind, DEFAULT_TOP_K } from "./find/find.js";
+import { runFindRules } from "./core/engine.js";
 import {
   renderCheckPretty,
   renderDiffPretty,
+  renderFindFindingsPretty,
+  renderFindPretty,
   renderScenarioPlan,
   renderServerWeighPretty,
   renderSkillSetPretty,
@@ -23,11 +27,11 @@ import {
   renderTestReportPretty,
   setColor,
 } from "./reporters/pretty.js";
-import { parseScenario, runScenario } from "./testing/harness.js";
-import { anthropicRunner } from "./testing/anthropicRunner.js";
+import { parseScenario, runScenario, type Runner } from "./testing/harness.js";
+import { acceptsSamplingParams, anthropicRunner } from "./testing/anthropicRunner.js";
 import { openaiRunner, providerForModel } from "./testing/openaiRunner.js";
 import { toJsonEnvelope } from "./reporters/json.js";
-import { renderCheckMarkdown, renderDiffMarkdown, renderSkillSetMarkdown, renderWeighMarkdown } from "./reporters/markdown.js";
+import { renderCheckMarkdown, renderDiffMarkdown, renderFindMarkdown, renderSkillSetMarkdown, renderWeighMarkdown } from "./reporters/markdown.js";
 import { gradeBadgeSpec, makeBadgeSvg, toShieldsEndpoint, weighBadgeSpec } from "./reporters/badge.js";
 import { loadDotEnv } from "./util/dotenv.js";
 import type { CheckReport, ServerWeighResult, WeighResult } from "./core/types.js";
@@ -51,6 +55,7 @@ examples:
   $ npx efaimo weigh --client claude-code
   $ npx efaimo check --mcp "npx -y my-mcp-server"      # incl. 2026-07-28 readiness
   $ npx efaimo check --skill ./skills/
+  $ npx efaimo find "npx -y my-mcp-server"             # would a search surface these tools?
   $ npx efaimo weigh "npx -y my-server" --out base.json && npx efaimo weigh "npx -y my-server" --diff base.json
 `,
   );
@@ -133,7 +138,17 @@ interface CommonOpts {
   header?: Record<string, string>;
   env?: Record<string, string>;
   stdio?: boolean;
+  timestamp?: boolean;
 }
+
+// `--no-timestamp` is commander's negated form, so `opts.timestamp` is true
+// unless the flag is passed. Kept in one helper because three commands take it
+// and the polarity is easy to invert by accident.
+function envelopeOpts(opts: { timestamp?: boolean }): { timestamp: boolean } {
+  return { timestamp: opts.timestamp !== false };
+}
+
+const NO_TIMESTAMP_HELP = "omit generatedAt from JSON output (for committed or diffed artifacts)";
 
 program
   .command("weigh")
@@ -147,6 +162,7 @@ program
   .option("--timeout <seconds>", "connect timeout in seconds", "45")
   .option("--json", "print JSON")
   .option("--md", "print Markdown")
+  .option("--no-timestamp", NO_TIMESTAMP_HELP)
   .option("--out <file>", "write the JSON result to a file (usable as a --diff baseline)")
   .option("--diff <baseline>", "compare against a baseline JSON from --out")
   .option("--max-tokens <n>", "exit 1 if the primary total exceeds n tokens")
@@ -264,14 +280,18 @@ program
     );
 
     if (opts.out && single) {
-      fs.writeFileSync(opts.out, toJsonEnvelope("weigh", single));
+      // Never stamped. A baseline exists to be compared against, so a field
+      // that differs on every write is the one field a comparison must ignore,
+      // and a committed baseline that diffs on nothing but the clock trains
+      // reviewers to skim exactly the file they should read.
+      fs.writeFileSync(opts.out, toJsonEnvelope("weigh", single, { timestamp: false }));
       console.error(pc.dim(`baseline written: ${opts.out}`));
     } else if (opts.out) {
       console.error(pc.yellow("--out skipped: it writes a single baseline, but multiple targets were requested"));
     }
 
     if (opts.json) {
-      console.log(toJsonEnvelope("weigh", single ?? results));
+      console.log(toJsonEnvelope("weigh", single ?? results, envelopeOpts(opts)));
     } else if (opts.md) {
       console.log(results.map(renderWeighMarkdown).join("\n\n---\n\n"));
     } else {
@@ -348,6 +368,7 @@ program
   .option("--timeout <seconds>", "connect timeout in seconds", "45")
   .option("--json", "print JSON")
   .option("--md", "print Markdown")
+  .option("--no-timestamp", NO_TIMESTAMP_HELP)
   .option("--badge [file]", "write a grade badge SVG + shields endpoint JSON")
   .option("--anthropic [model]", "use exact Claude token counts where relevant")
   .option("--window <tokens>", "context window the share is reported against", String(DEFAULT_CONTEXT_WINDOW))
@@ -402,7 +423,7 @@ program
     }
 
     if (skillSet) {
-      if (opts.json) console.log(toJsonEnvelope("check", skillSet));
+      if (opts.json) console.log(toJsonEnvelope("check", skillSet, envelopeOpts(opts)));
       else if (opts.md) console.log(renderSkillSetMarkdown(skillSet));
       else console.log(renderSkillSetPretty(skillSet));
       const errs =
@@ -416,7 +437,7 @@ program
     }
     if (!report) return;
 
-    if (opts.json) console.log(toJsonEnvelope("check", report));
+    if (opts.json) console.log(toJsonEnvelope("check", report, envelopeOpts(opts)));
     else if (opts.md) console.log(renderCheckMarkdown(report));
     else console.log(renderCheckPretty(report));
 
@@ -472,36 +493,184 @@ program
   });
 
 program
+  .command("find")
+  .description("would a search surface these tools? (findability under deferred tool loading)")
+  .argument("[target]", "stdio command | http(s) URL")
+  .option("--stdio", "treat target as a stdio command string")
+  .option("--header <header>", 'HTTP header "Key: Value" (repeatable)', collectPairs(":"))
+  .option("--env <pair>", "KEY=VALUE for stdio servers (repeatable)", collectPairs("="))
+  .option("--timeout <seconds>", "connect timeout in seconds", "45")
+  .option(
+    "--top <n>",
+    `result window to simulate (Anthropic's documented default is ${DEFAULT_TOP_K}; the probe is vacuous when tools <= top, so gate on --min-distinct rather than on this)`,
+    String(DEFAULT_TOP_K),
+  )
+  .option("--min-distinct <pct>", "exit 1 if fewer than pct percent of tools own a word no other tool has")
+  .option("--json", "print JSON")
+  .option("--md", "print Markdown")
+  .option("--no-timestamp", NO_TIMESTAMP_HELP)
+  .option("--no-color", "disable colors")
+  .addHelpText(
+    "after",
+    "\nA tool marked defer_loading is kept out of the context window until a search finds it, so a tool\n" +
+      "nothing surfaces costs nothing and does nothing. Two numbers come back. `distinct` is a property of\n" +
+      "the catalog: a tool that owns no word the others lack cannot be matched by any query that does not\n" +
+      "also match a competitor. `probe` is a simulated BM25 search, offline and deterministic, and it\n" +
+      "saturates on well-formed catalogs, so it is a floor test rather than a ranking.\n" +
+      "No API key, no network beyond connecting to the server. docs/METHODOLOGY.md has the method.",
+  )
+  .action(async (targetArg: string | undefined, opts: CommonOpts & { top?: string; minDistinct?: string }) => {
+    colorSetup(opts);
+    if (!targetArg) fail("nothing to search: pass an MCP server (stdio command or URL)");
+    const timeoutMs = seconds(opts.timeout) * 1000;
+    const topK = parseNumberOpt(opts.top, "--top", { min: 1 }) ?? DEFAULT_TOP_K;
+    // A window is a count of results, so a fraction of one is not a stricter
+    // setting, it is a nonsensical one: `--top 2.5` printed "result window 2.5"
+    // while `rank <= 2.5` behaved as 2, so the number in the report and the
+    // number in the comparison disagreed.
+    if (!Number.isInteger(topK)) fail(`--top must be a whole number of results, got "${opts.top}"`);
+    const minDistinct = parseNumberOpt(opts.minDistinct, "--min-distinct", { min: 0 });
+    if (minDistinct !== undefined && minDistinct > 100) fail(`--min-distinct is a percentage, got "${opts.minDistinct}"`);
+
+    const target = resolveTarget(targetArg, { forceStdio: opts.stdio, env: opts.env, headers: opts.header });
+    if (target.kind === "skillset" || target.kind === "repo") {
+      fail(
+        `"${target.label}" is a ${target.kind === "skillset" ? "skill path" : "source directory"}; find needs a live MCP server (stdio command or URL). ` +
+          `Skills have no searchable tool catalog; their trigger-overlap check is S103 in \`efaimo check --skill\`.`,
+      );
+    }
+
+    console.error(pc.dim(`connecting to ${target.label} ...`));
+    const intro = await introspectServer(target, { timeoutMs });
+    // Weighed only to answer one question: is this catalog big enough that a
+    // host would defer it. No API key is involved; the count is the local
+    // o200k estimate the rest of the tool uses.
+    const weigh = await weighServer(intro);
+    const result = analyzeFind(target.label, intro.tools, {
+      topK,
+      definitionTokens: weigh.totals.claudeStyle,
+    });
+    const findings = runFindRules({ find: result });
+
+    if (opts.json) {
+      console.log(toJsonEnvelope("find", { ...result, findings }, envelopeOpts(opts)));
+    } else if (opts.md) {
+      console.log(renderFindMarkdown(result, findings));
+    } else {
+      console.log(renderFindPretty(result));
+      console.log(renderFindFindingsPretty(result, findings));
+    }
+
+    // Gated on `distinct`, not on the probe. The probe is 100% by construction
+    // whenever the catalog fits inside the result window, so a gate on it
+    // would pass without examining anything for every small server. Exclusive
+    // vocabulary can fail at two tools and up.
+    //
+    // At ONE tool it cannot: every term is trivially exclusive and the figure
+    // is 100% for any tool whatsoever. Exit 2 rather than 0, because "this
+    // gate cannot be evaluated here" is a different fact from "this gate
+    // passed", and a CI run that silently passes on a catalog nothing was
+    // measured against is the failure this whole command was built around.
+    if (minDistinct !== undefined && result.distinctVacuous) {
+      fail(
+        `--min-distinct cannot be evaluated on a ${result.toolCount}-tool catalog: with nothing to be distinct from, ` +
+          `every term is trivially exclusive and the figure is 100% for any tool. Drop the gate for this server.`,
+      );
+    }
+    if (minDistinct !== undefined && result.distinct.pct < minDistinct) {
+      console.error(
+        pc.red(
+          `distinct ${result.distinct.pct}% is below --min-distinct ${minDistinct}% ` +
+            `(${result.distinct.total - result.distinct.count} of ${result.distinct.total} tools own no word the others lack)`,
+        ),
+      );
+      process.exitCode = 1;
+    }
+  });
+
+program
   .command("test")
   .description("does a skill actually improve task completion? (experimental A/B outcome harness)")
   .argument("<scenario>", "a scenario YAML file (see examples/scenario.example.yaml)")
   .option("--live", "run for real (spends tokens; Claude models need ANTHROPIC_API_KEY, GPT models need OPENAI_API_KEY)")
   .option("--model <model>", "override the scenario's model (e.g. gpt-4o-mini, claude-sonnet-5)")
+  .option("--judge-model <model>", "grade with a different model than the one under test (removes self-preference)")
   .option("--json", "print JSON")
   .option("--no-color", "disable colors")
-  .addHelpText("after", "\nWithout --live this validates the scenario and prints the plan, making no API calls.")
-  .action(async (file: string, opts: { live?: boolean; model?: string; json?: boolean; color?: boolean }) => {
+  .addHelpText(
+    "after",
+    "\nWithout --live this validates the scenario and prints the plan, making no API calls.\n" +
+      "The judge defaults to the model under test, which means a model grades its own answers; set\n" +
+      "judge_model in the scenario or --judge-model here to separate them. Subject and judge may be\n" +
+      "different providers, in which case both keys are required.",
+  )
+  .action(async (file: string, opts: { live?: boolean; model?: string; judgeModel?: string; json?: boolean; color?: boolean }) => {
     colorSetup(opts);
     const parsed = parseScenario(file);
-    const scenario = opts.model ? { ...parsed, model: opts.model } : parsed;
+    // --model moves the judge too WHEN the judge was never pinned separately.
+    // Without this, overriding the subject on a scenario that has no
+    // `judge_model` would silently leave the judge on the scenario's original
+    // model: a cross-model judge nobody asked for, in a run whose whole point
+    // is that the comparison is controlled.
+    const judgeFollowsSubject = !parsed.judgeModelExplicit;
+    const model = opts.model ?? parsed.model;
+    const judgeModel = opts.judgeModel ?? (judgeFollowsSubject ? model : parsed.judgeModel);
+    const scenario = { ...parsed, model, judgeModel };
+
     if (!opts.live) {
       console.log(renderScenarioPlan(scenario));
       return;
     }
-    const provider = providerForModel(scenario.model);
-    if (provider === "unknown") {
-      fail(`model "${scenario.model}" is not supported: efaimo test runs Claude (claude-*) and OpenAI (gpt-*, o*) models`);
+
+    // Subject and judge are routed independently, so a Claude subject can be
+    // graded by a GPT judge (or the reverse). Every distinct provider in play
+    // needs its own key, and the error says which model asked for it.
+    const runners = new Map<string, Runner>();
+    for (const [role, m] of [["model", scenario.model], ["judge model", scenario.judgeModel]] as const) {
+      const provider = providerForModel(m);
+      if (provider === "unknown") {
+        fail(`${role} "${m}" is not supported: efaimo test runs Claude (claude-*) and OpenAI (gpt-*, o*) models`);
+      }
+      if (runners.has(provider)) continue;
+      const envVar = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
+      const apiKey = process.env[envVar];
+      if (!apiKey) fail(`${role} "${m}" needs ${envVar} in the environment or a .env file`);
+      if (dotEnvKeys.has(envVar)) console.error(pc.dim(`using ${envVar} from .env`));
+      runners.set(provider, provider === "openai" ? openaiRunner(apiKey) : anthropicRunner(apiKey));
     }
-    const envVar = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
-    const apiKey = process.env[envVar];
-    if (!apiKey) fail(`model "${scenario.model}" needs ${envVar} in the environment or a .env file`);
-    if (dotEnvKeys.has(envVar)) console.error(pc.dim(`using ${envVar} from .env`));
-    const runner = provider === "openai" ? openaiRunner(apiKey) : anthropicRunner(apiKey);
-    console.error(pc.dim(`running ~${scenario.trials * 4} ${provider} API calls against ${scenario.model} ...`));
-    const report = await runScenario(scenario, runner);
+    const runner: Runner = (req) => {
+      const r = runners.get(providerForModel(req.model));
+      // Only the two validated models can reach here today. A future arm that
+      // introduces a third would otherwise die as "undefined is not a
+      // function" with no idea which model it was.
+      if (!r) throw new Error(`no runner for model "${req.model}"; efaimo test runs Claude and OpenAI models`);
+      return r(req);
+    };
+
+    // Say what the measurement cannot pin down, in the report, every time.
+    const extraNotes: string[] = [];
+    if (scenario.judgeModel === scenario.model) {
+      extraNotes.push(
+        `the judge is the same model as the subject, so part of any measured effect is a model preferring its own output. Set judge_model (or --judge-model) to a different model to remove that.`,
+      );
+    }
+    if (providerForModel(scenario.judgeModel) === "anthropic" && !acceptsSamplingParams(scenario.judgeModel)) {
+      extraNotes.push(
+        `judge sampling is not pinned: ${scenario.judgeModel} does not accept temperature, so the judge is sampled at its default and its own variance is part of this measurement.`,
+      );
+    }
+
+    const models = scenario.judgeModel === scenario.model ? scenario.model : `${scenario.model} judged by ${scenario.judgeModel}`;
+    console.error(pc.dim(`running ~${scenario.trials * 4} API calls against ${models} ...`));
+    const report = await runScenario(scenario, runner, { extraNotes });
     if (opts.json) console.log(toJsonEnvelope("test", report));
     else console.log(renderTestReportPretty(report));
-    if (report.verdict === "hurts") process.exitCode = 1;
+    // `inconclusive` fails too. It means an arm produced no scoreable trial, or
+    // the judge refused on one arm far more than the other, and in both cases
+    // the measurement did not happen. Exiting 0 there would report a green for
+    // precisely the runs where the instrument broke down, which is this
+    // project's documented dominant failure mode wearing a p-value.
+    if (report.verdict === "hurts" || report.verdict === "inconclusive") process.exitCode = 1;
   });
 
 program

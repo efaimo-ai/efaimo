@@ -83,6 +83,8 @@ const scenario = (trials: number): Scenario => ({
   skillName: "x",
   skillBody: "body",
   model: "claude-sonnet-5",
+  judgeModel: "claude-sonnet-5",
+  judgeModelExplicit: false,
   trials,
   task: "do the thing",
   judge: "did it do the thing",
@@ -113,5 +115,41 @@ describe("verdict is gated on significance, not on the gap", () => {
     expect(rep.withSkill.unparseable).toBe(2);
     expect(rep.withSkill.scored).toBe(0);
     expect(rep.verdict).toBe("inconclusive");
+  });
+});
+
+describe("excluding an unanswered trial is only safe while it is even-handed", () => {
+  // runScenario runs the WITHOUT arm first, then the WITH arm, so judge call
+  // 1..n belong to without-skill and n+1..2n to with-skill.
+  function judgeRefusesRange(refuseFrom: number): Runner {
+    let judgeCalls = 0;
+    return async (req) => {
+      if (!req.deterministic) return "an answer";
+      judgeCalls++;
+      return judgeCalls > refuseFrom ? "I cannot grade this" : "PASS";
+    };
+  }
+
+  it("calls a run inconclusive when the judge fails on one arm far more than the other", () => {
+    // The dangerous case is PARTIAL: with-skill loses half its trials and
+    // still has ten left, so a pass rate and a p-value both compute cleanly
+    // and both are rates over different populations. Total failure of one arm
+    // is caught earlier and more specifically by the no-scoreable-trial branch.
+    return runScenario(scenario(20), judgeRefusesRange(30)).then((rep) => {
+      expect(rep.withoutSkill.unparseable).toBe(0);
+      expect(rep.withSkill.unparseable).toBe(10);
+      expect(rep.withSkill.scored).toBe(10);
+      expect(rep.unparseableSkewP).toBeLessThan(0.05);
+      expect(rep.verdict).toBe("inconclusive");
+      expect(rep.notes.join(" ")).toMatch(/not spread evenly/);
+    });
+  });
+
+  it("leaves a run alone when nothing is excluded", () => {
+    return runScenario(scenario(20), judgeRefusesRange(1000)).then((rep) => {
+      expect(rep.withSkill.unparseable).toBe(0);
+      expect(rep.unparseableSkewP).toBeCloseTo(1, 6);
+      expect(rep.verdict).not.toBe("inconclusive");
+    });
   });
 });

@@ -176,6 +176,60 @@ grade A (95)   quality: 0 errors  1 warning  0 info
 
 </details>
 
+### Can a search even single your tools out? *(unreleased)*
+
+> **`efaimo find` is not in `efaimo@0.1.2`, which is what `npx efaimo` installs
+> today.** Everything in this section describes `main`. The rest of this README
+> describes the published release.
+
+A host can mark tools `defer_loading: true`, which keeps their definitions out of
+the context window until a search returns them; Anthropic recommends turning that
+on once tool definitions pass ~10k tokens. Under deferral, a tool nothing
+surfaces costs no context and provides no capability, and neither `weigh` nor
+`check` looks at that.
+
+```bash
+npx efaimo find "npx -y my-mcp-server"
+```
+
+Two numbers come back, and they are different kinds of claim.
+
+**`distinct`** is a property of your catalog: how many tools own a term no other
+tool has. A tool that owns none cannot be matched by any query that does not also
+match a competitor. That follows from the index, not from a model of how anyone
+searches, and it is the number `--min-distinct` gates on in CI.
+
+```text
+distinct  22/24 (91.7%)   tools that own a word no other tool has
+probe     24/24 (100%)    returned by a simulated search for their own description
+
+  words  tool                     vocabulary no other tool has
+      0  browser_close            none: every word also on browser_click, browser_drag, browser_drop
+      0  browser_navigate         none: every word also on browser_tabs, browser_navigate_back, browser_network_requests
+      1  browser_evaluate         evaluate
+      1  browser_hover            hover
+      2  browser_resize           window, resize
+```
+
+*(That is `@playwright/mcp` 0.0.78, a well-maintained server, verbatim. Two of
+its twenty-four tools have no word of their own, and two more own only the word
+in their own name, which nobody describing a task would type.)*
+
+Four public servers measured this way, with the commands that reproduce each
+row, are in [the findability report](./research/findability/REPORT.md). The
+weakest was Notion's official server at 16 of 24, where `API-get-user` and
+`API-get-users` are different tools and nothing in their vocabulary separates
+them.
+
+**`probe`** is a simulated BM25 search over the four fields tool search matches
+on, and it is labelled a simulation because it is one. It reads 100% on both the
+official reference server and playwright, so it is a floor test that catches an
+empty description or a literal duplicate, not a ranking. `find` says that on
+every run rather than letting a saturated number look like a good score.
+
+There is no findability grade, on purpose:
+[docs/METHODOLOGY.md](./docs/METHODOLOGY.md) has the method, its limits, and why.
+
 ## From an agent
 
 `efaimo mcp` runs efaimo as a small, read-only MCP server, so an agent can lint or
@@ -252,8 +306,17 @@ And a mitigation you cannot measure is a mitigation you are trusting on faith:
 `weigh` reports the definitions your server actually ships, which is the input
 every mitigation operates on.
 
-If deferred loading covers your whole setup, you may not need this tool. Run
-`weigh` once and find out; that answer is worth more than our opinion.
+**And there is a fourth reason we did not have when this section was written
+*(unreleased)*.** Deferring a tool does not remove the question, it replaces
+it: a deferred tool that no search returns costs nothing and does nothing, so
+the thing worth measuring becomes whether each tool can be picked out of the
+catalog at all. `efaimo find` measures that, and on four public servers it
+found two to eight tools apiece that own no word their neighbours lack.
+Deferral is what makes findability matter, not what makes it moot.
+
+If deferred loading covers your whole setup, run `weigh` and `find` once and
+see what it costs you and what it hides; those answers are worth more than our
+opinion.
 
 ## Install
 
@@ -296,6 +359,7 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 | **S101 to S106** | skills: frontmatter and trigger quality, trigger collisions, context budget, reference integrity, injection hygiene |
 | **E101 to E118** | MCP 2026-07-28 readiness: deprecated primitives, statelessness, `server/discover`, `resultType`, cache fields, transport |
 | **E121 to E128, E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
+| **E141 to E146** *(unreleased)* | MCP findability: exclusive vocabulary, whether a search returns the tool, indistinguishable pairs, names that carry no domain word |
 
 `E000` is not a finding about your server: it means one of efaimo's own rules
 threw and was skipped, so the report is incomplete. It is never scored.
@@ -303,15 +367,19 @@ threw and was skipped, so the report is incomplete. It is never scored.
 Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
 findings (E101-E118) are reported as an ungraded migration diff, which
 `--strict-readiness` can turn into a non-zero exit
-without touching the grade.
+without touching the grade. Findability findings (E14x) belong to `efaimo find`
+and never touch a grade either *(unreleased)*.
 Every finding carries a stable id you can suppress or link. See
 [docs/RULES.md](./docs/RULES.md).
 
 ## Roadmap
 
-- Harden `efaimo test`: a separately chosen judge model, confidence intervals on
-  the delta, multi-turn tool-use trials, and judge calibration, so the
-  experimental harness earns unqualified trust.
+- Harden `efaimo test`: a length-matched placebo arm (the control currently gets
+  no system prompt at all, which confounds the skill's content with having any
+  system prompt), multi-turn tool-use trials, and judge calibration, so the
+  experimental harness earns unqualified trust. A separately chosen judge model
+  and confidence intervals on the delta are done, the judge model on `main`
+  only *(unreleased)*.
 - Readiness rules for the two 2026-07-28 changes that have none yet: the
   `Mcp-Method` / `Mcp-Name` request headers (SEP-2243), and Tasks moving out of
   core into the `io.modelcontextprotocol/tasks` extension (SEP-2663).

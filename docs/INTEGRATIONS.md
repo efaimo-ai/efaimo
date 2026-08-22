@@ -36,6 +36,19 @@ Ratchet MCP tool-definition cost with the budget gate (commit `base.json` once w
 - run: npx efaimo weigh "npx -y your-server" --diff base.json --allow-increase 10
 ```
 
+Keep every tool findable once a host defers your catalog **(unreleased: needs
+efaimo 0.2.0; `npx efaimo` installs 0.1.2)**. `--min-distinct` fails the run
+when a tool owns no word the other tools lack, which means no search can return
+it without also returning a competitor:
+
+```yaml
+- run: npx efaimo find "npx -y your-server" --min-distinct 100
+```
+
+Start it at the number you have today rather than at 100 and raise it as you
+fix tools; the command prints the line to copy. It refuses to run on a one-tool
+catalog, where the figure is 100% by construction, rather than passing.
+
 Post the grade on the PR with `--md` (pipe into any comment action):
 
 ```yaml
@@ -108,7 +121,9 @@ the current SDK.
 
 ## Programmatic use
 
-Every capability is also a typed function:
+Every capability is also a typed function. `analyzeFind`, `runFindRules` and the
+two `find` renderers are exported alongside the rest **(unreleased)**; the rule
+tables themselves stay private, like the other two families.
 
 ```ts
 import { weighServer, introspectServer, checkSkillSet } from "efaimo";

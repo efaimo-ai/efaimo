@@ -19,17 +19,25 @@ no bundler.
 
 ## Adding a rule
 
-Rules live in `src/rules/mcp/index.ts` and `src/rules/skill/index.ts`. Each has a
-stable id (E1xx MCP readiness, E12x-E13x MCP quality, S1xx skills). When you add
-one:
+Rules live in `src/rules/mcp/index.ts`, `src/rules/skill/index.ts` and
+`src/rules/find/index.ts`. Each has a stable id (E1xx MCP readiness, E12x-E13x
+MCP quality, E14x findability, S1xx skills). Ids are never reused, so a gap is
+permanent: there is no E129. When you add one:
 
 1. Give it the next free id and a one-line `title`.
-2. Add it to the exported `MCP_RULES` / `SKILL_RULES` array.
+2. Add it to the exported `MCP_RULES` / `SKILL_RULES` / `FIND_RULES` array.
 3. Document it in `docs/RULES.md`; a test (`test/meta.test.ts`) fails if any rule
    id is missing from that file.
-4. If it cites a spec change, link the SEP/PR and verify the wording against the
+4. Update the literal rule inventory in `test/meta.test.ts` and decide whether
+   `RULES_VERSION` in `src/rules/version.ts` has to move. The inventory pin
+   exists to put you in that file; it catches an added, removed or renumbered
+   rule, and it cannot catch a changed threshold inside an existing one. That
+   part is yours.
+5. If it cites a spec change, link the SEP/PR and verify the wording against the
    primary source (the changelog at modelcontextprotocol.io, not a summary).
-5. Add a test that proves it fires (and, ideally, that it does not false-positive).
+6. Add a test that proves it fires, and one that proves it does not fire on the
+   nearest thing that should be fine. Then break the rule on purpose and watch
+   the first test go red before you trust the green.
 
 A rule that reads a live server or repo must never throw; the engine wraps each
 `check()` in try/catch, but return `[]` on anything you cannot assess rather than

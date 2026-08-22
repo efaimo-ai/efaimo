@@ -1,9 +1,9 @@
 ---
 name: efaimo
-description: Audit MCP servers and Agent Skills for quality and context-window cost. Use when the user wants to check an MCP server's token cost, lint a skill, verify 2026-07-28 MCP spec readiness, or add an efaimo badge or CI gate.
+description: Audit MCP servers and Agent Skills for quality and context-window cost. Use when the user wants to check an MCP server's token cost, lint a skill, verify 2026-07-28 MCP spec readiness, find out whether a search can single out a server's tools under deferred tool loading, or add an efaimo badge or CI gate.
 license: Apache-2.0
 metadata:
-  version: "0.1.2"
+  version: "0.2.0"
   homepage: "https://efaimo.ai"
 ---
 
@@ -49,6 +49,12 @@ and this file is where agents take orders.
 - **Lint a skill**
   `npx efaimo check --skill ./skills/` validates frontmatter, trigger quality,
   context budget, file references, and injection patterns.
+- **Check whether a search can single a tool out** *(unreleased: needs efaimo
+  0.2.0; `npx efaimo` installs 0.1.2, which has no `find` command)*
+  `npx efaimo find "npx -y <server>"` reports how many tools own a term no
+  other tool in the catalog has. A tool that owns none cannot be matched by any
+  query that does not also match a competitor, which matters once a host defers
+  tool loading. `--min-distinct 100` is the CI gate.
 - **Gate a pull request on context cost**
   Save a baseline with `npx efaimo weigh "<server>" --out base.json`, then in CI
   run `npx efaimo weigh "<server>" --diff base.json --allow-increase 10` to fail
@@ -56,11 +62,13 @@ and this file is where agents take orders.
 
 ## Reading the output
 
-Findings carry a stable rule id (E1xx MCP readiness, E12x-E13x MCP quality, S1xx
-skills) and a severity. The letter grade covers quality and skill findings only;
-2026-07-28 readiness items appear separately as an ungraded migration diff. Token
-numbers are o200k estimates unless `--anthropic` is used; see the methodology doc
-for the full method.
+Findings carry a stable rule id (E1xx MCP readiness, E12x-E13x MCP quality,
+E14x findability *(unreleased)*, S1xx skills) and a severity. The letter grade
+covers quality and skill findings only; 2026-07-28 readiness items appear
+separately as an ungraded migration diff, and findability *(unreleased)* is a
+separate command with no grade at all. Token numbers are o200k estimates unless
+`--anthropic` is used, which names the model it measured against; see the
+methodology doc for the full method.
 
 ## Notes
 

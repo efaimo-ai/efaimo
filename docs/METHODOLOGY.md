@@ -131,19 +131,31 @@ trials. At that size 5/5 against 4/5 is +20 points and p = 1.0000.
 
 Two things the judge does, which matter for reading a result:
 
-- it runs at **temperature 0**, so the same answer grades the same way twice.
-  The subject arm stays at temperature 1, because normal behaviour is the thing
-  being measured;
+- it is asked to sample deterministically **where the model still accepts a
+  sampling parameter**. Claude removed `temperature` from the 4.7 line onward,
+  so on Sonnet 5, Opus 5 and their siblings the judge runs at the model's own
+  default and its variance is part of the measurement. The report says so on
+  every run that this applies to, rather than claiming a determinism it does
+  not have. **(unreleased; `efaimo@0.1.2` sends the parameter unconditionally,
+  which those models reject with a 400.)** The subject arm is unaffected: it
+  wanted temperature 1, which is the default anyway;
 - a reply that is neither PASS nor FAIL is **excluded and counted separately**,
   not scored as a failure. A refusal or an API error is not evidence about the
-  skill.
+  skill. Exclusion is only unbiased while it falls on both arms alike, so the
+  report also carries a **two-sided Fisher exact p on the unparseable counts**,
+  and a skew significant at the same 0.05 makes the verdict `inconclusive`:
+  two pass rates computed over different populations cannot be subtracted.
+  **(unreleased.)**
 
 ### What this design still cannot tell you
 
 Named here rather than left for a reader to discover:
 
-- **The judge is the same model as the subject.** A separate judge model would
-  be stronger.
+- **The judge defaults to the same model as the subject**, so part of any
+  measured effect is a model preferring its own output. `judge_model:` in the
+  scenario, or `--judge-model`, points it at another model, and the report
+  prints both. Subject and judge may be different providers. **(unreleased;
+  `efaimo@0.1.2` always judges with the subject model.)**
 - **The control arm receives no system prompt at all**, so "the skill's
   content" is confounded with "having any system prompt". A length-matched
   placebo is the fix and is not implemented.
@@ -151,3 +163,98 @@ Named here rather than left for a reader to discover:
   show the method works, not that skills in general do or do not help.
 
 Treat a single scenario as evidence about that scenario.
+
+## `efaimo find`: findability **(unreleased)**
+
+A host may mark tools `defer_loading: true`, which keeps their definitions out
+of the system-prompt prefix until a search returns them. Anthropic lists five
+conditions for turning that on, joined by "any of the following apply", and two
+of them can be checked from a tool list: **ten or more tools**, or **more than
+10k tokens of definitions**. `find` checks both and names the one that fired.
+An earlier version implemented only the token clause, which told a reader that
+a 24-tool, 3.5k-token catalog was probably loaded up front when Anthropic's
+first condition already applied to it.
+
+Under deferral, a tool nothing surfaces costs no context and provides no
+capability, so "can this be found" becomes a separate question from "what does
+this cost" and "how good is this tool".
+
+`find` answers it with two numbers that are **not the same kind of claim**, and
+prints both with their denominators. In JSON they are `data.distinct` and
+`data.probe`; the terminal uses the same two words.
+
+### `distinct`: a property of the catalog
+
+For every tool, which of its terms does no other tool in the catalog have?
+
+If the answer is none, then every word that tool contains appears somewhere
+else, so **no query exists that matches it without also matching a
+competitor**. That is not a prediction about a particular search. It follows
+from the index, and the only assumption in it is the tokenizer.
+
+The precise limit of the claim, stated because it is easy to overstate: a tool
+with no exclusive vocabulary can still be ranked *first* for a shared query,
+because BM25 also weighs term frequency and document length. What it can never
+do is come back alone. Owning a word is a much stronger position than winning a
+tie-break.
+
+Terms come from the four fields the tool search documentation names as
+searchable: **tool name, description, argument names, argument descriptions**.
+Tokenization splits camelCase, `snake_case` and `kebab-case` onto the same
+terms, lowercases, drops single characters, and does no stemming, so `page` and
+`pages` are different terms (`src/find/tokenize.ts`, identified in JSON as
+`data.method.tokenizer`, a string that changes when the splitting rules do).
+English function words are excluded from ownership as well as from queries: a
+tool can be the only one in a catalog that says "the", and counting that as
+vocabulary it owns would be true and useless.
+
+**`title` is deliberately not indexed**, though MCP tools may carry one.
+Anthropic's list of searchable fields does not include it, and a `title` is
+usually the name restated for humans, so reading it would put the tool's own
+name back into its own probe. Indexing a field the real search cannot read also
+makes the number optimistic: a tool would "own" a word no query can reach.
+Measured cost of getting this wrong: Notion's server scored 17/24 with `title`
+indexed and 16/24 without, and the 16 is the honest one.
+
+**At one tool the number cannot be computed.** Every term is trivially
+exclusive, so the figure is 100% for any tool whatsoever. The report says so and
+`--min-distinct` refuses to be evaluated rather than reporting a pass.
+
+### `probe`: a simulation, and a saturated one
+
+BM25 (k1=1.2, b=0.75) over those same fields, with each tool queried using the
+highest tf-idf terms **of its own description** and a result window of 5, which
+is the documented default number of results a search returns.
+
+Two honest limits:
+
+- The real search runs server-side. Its analyzer and parameters are not
+  published, so this is a model of a documented mechanism, not a reproduction.
+- **It saturates.** Measured on four public servers: 13/13, 24/24, 26/26 and
+  24/24, and every query variant tried (tf-idf, raw tf, leading terms) gave the
+  same 100%. The query comes from the tool's own words, which is friendlier
+  than anything a user would type. Treat it as a floor test that catches an
+  empty description or a literal duplicate, not as a ranking.
+  [The findability report](../research/findability/REPORT.md) has the numbers
+  and the commands that reproduce them.
+
+The query deliberately excludes the tool's **name** and its **title**. An
+earlier version included both and the metric could barely fail: a unique name
+token has maximal idf, so it entered every query and pulled its own tool to the
+top, and two tools with identical descriptions both scored a clean first place.
+The name stays in the index, so a name whose words echo the description still
+helps it rank.
+
+### Why there is no findability grade
+
+Because the two numbers answer different questions and only one of them is a
+measurement rather than a model, and because a letter would have inherited the
+defect the quality grade already has: it cannot see size. See ADR-030. The gate
+is `--min-distinct`, which the operator sets, on the number that can actually
+fail at two tools and up.
+
+The colour the terminal puts on `distinct` is not a grade either: red means the
+E141 condition holds (some tool owns nothing), green means it does not. An
+earlier version banded it at 95 and 80 percent, two cutoffs that appeared in no
+rule and no document, inside the one command whose design note says it does not
+grade.

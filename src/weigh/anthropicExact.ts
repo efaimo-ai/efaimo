@@ -8,11 +8,19 @@ const DEFAULT_MODEL = "claude-sonnet-5";
  * /v1/messages/count_tokens with and without the tools array (the endpoint
  * accepts `tools`; verified against the official API reference 2026-07-16).
  * Returns undefined on any failure; callers treat this as optional precision.
+ *
+ * Returns the model alongside the count, and the model is not optional in the
+ * result. Claude model lines do not share a tokenizer, so "the exact count" is
+ * exact for one model and an approximation for the next, and a number printed
+ * without the model it was measured on cannot be reproduced or compared. This
+ * is the same rule `src/weigh/window.ts` already applies to the context-window
+ * denominator: never print a figure whose basis is an assumption without
+ * naming the assumption.
  */
 export async function countClaudeToolTokens(
   tools: ToolDef[],
   opts: { apiKey: string; model?: string },
-): Promise<number | undefined> {
+): Promise<{ tokens: number; model: string } | undefined> {
   const model = opts.model ?? DEFAULT_MODEL;
   const base = { model, messages: [{ role: "user", content: "hi" }] };
   const apiTools = tools.map((t) => ({
@@ -27,7 +35,7 @@ export async function countClaudeToolTokens(
     ]);
     if (withTools === undefined || withoutTools === undefined) return undefined;
     const delta = withTools - withoutTools;
-    return delta >= 0 ? delta : undefined;
+    return delta >= 0 ? { tokens: delta, model } : undefined;
   } catch {
     return undefined;
   }

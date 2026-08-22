@@ -50,13 +50,19 @@ export async function weighServer(
   ];
 
   let anthropicExactTotal: number | undefined;
+  let anthropicExactModel: string | undefined;
   if (opts.anthropicApiKey && intro.tools.length > 0) {
-    anthropicExactTotal = await countClaudeToolTokens(intro.tools, {
+    const exact = await countClaudeToolTokens(intro.tools, {
       apiKey: opts.anthropicApiKey,
       model: opts.anthropicModel,
     });
-    if (anthropicExactTotal !== undefined) {
-      notes.push("anthropic-exact measured via /v1/messages/count_tokens (tools delta)");
+    if (exact !== undefined) {
+      anthropicExactTotal = exact.tokens;
+      anthropicExactModel = exact.model;
+      // Name the model. Claude model lines do not share a tokenizer, so this
+      // figure is exact for `exact.model` and an estimate for anything else,
+      // and a reader comparing two runs has to be able to see which is which.
+      notes.push(`anthropic-exact measured via /v1/messages/count_tokens (tools delta) against ${exact.model}`);
     } else {
       notes.push("anthropic-exact measurement failed; showing o200k estimates only");
     }
@@ -73,6 +79,7 @@ export async function weighServer(
     framingTokens,
     instructionsTokens: count(intro.instructions ?? ""),
     anthropicExactTotal,
+    anthropicExactModel,
     notes,
   };
 }

@@ -1,4 +1,4 @@
-import type { CheckReport, ServerWeighResult, SkillSetWeighResult } from "../core/types.js";
+import type { CheckReport, Finding, FindResult, ServerWeighResult, SkillSetWeighResult } from "../core/types.js";
 import type { CheckSkillResult } from "../check/check.js";
 import type { WeighDiff } from "../weigh/diff.js";
 import { VERSION } from "../version.js";
@@ -8,24 +8,62 @@ const SEV_LABEL = { error: "🔴 error", warn: "🟡 warn", info: "🔵 info" } 
 
 // Everything through here came from the audited target, and
 // docs/INTEGRATIONS.md recommends piping --md into $GITHUB_STEP_SUMMARY, so a
-// hostile tool name or description renders into a page the reader trusts.
-// Two things were missing: control characters (raw ESC bytes were written
-// through literally) and backticks (most call sites wrap the value in a code
-// span, so one backtick closes it and the rest of the name becomes markup).
-// The backtick is neutralised with a zero-width space rather than a backslash,
-// because a backslash is not an escape inside a code span.
-function esc(s: string): string {
+// hostile tool name or description renders into a page the reader trusts. An
+// auditor's verdict must not be rewritable by the thing being audited.
+//
+// Two escapes that were here did not work, both found by adversarial review:
+//
+//   `\|`  was applied without escaping the backslash first. A name containing
+//         backslash-pipe became `\\|`, which GFM reads as an escaped backslash
+//         followed by a LIVE cell delimiter. Extra cells past the header count
+//         are dropped, so a hostile server could push the real verdict column
+//         off the end of the row and supply its own.
+//
+//   `` ` `` was neutralised by putting a zero-width space BEFORE it, which
+//         changes nothing: a code span ends at the next backtick run whatever
+//         precedes it. The rest of the name then rendered as live markup, and a
+//         `[click](url)` in a tool name became a link in the summary. A
+//         backtick cannot be escaped inside a code span at all, so it is
+//         substituted rather than escaped; a tool whose name contains one is
+//         still recognisable and can no longer close the span.
+function escCode(s: string): string {
   return safeText(s)
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\\/g, "\\\\")
     .replace(/\|/g, "\\|")
-    .replace(/`/g, "​`")
-    .replace(/\n/g, " ");
+    .replace(/`/g, "'");
 }
+
+// For a cell that is NOT wrapped in a code span, where markdown and inline
+// HTML are both live. Every value that reaches one of these should really be
+// in a code span; this is the belt for the places that are not, such as rule
+// messages, which embed a tool name mid-sentence.
+function escText(s: string): string {
+  return escCode(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/([[\]*_~])/g, "\\$1");
+}
+
+/** Backwards-compatible alias for the code-span form, which is what most call sites want. */
+const esc = escCode;
 
 function findingsTable(lines: string[], findings: CheckReport["findings"]): void {
   lines.push("| severity | rule | finding |");
   lines.push("|---|---|---|");
   for (const f of findings) {
-    lines.push(`| ${SEV_LABEL[f.severity]} | ${f.ruleId} | ${esc(f.message)} |`);
+    // escText, not escCode: a message is prose, not a code span, so markdown
+    // and inline HTML are both live in this cell. The message embeds a tool
+    // name the target chose.
+    //
+    // detail and fixHint were dropped here, so E141's "every word it has also
+    // appears on: ..." and E142's "outranked by: ..." existed in the terminal
+    // and in JSON and silently vanished from the surface the CI docs recommend.
+    const extra = [f.detail, f.fixHint && `fix: ${f.fixHint}`].filter(Boolean).join(" ");
+    lines.push(
+      `| ${SEV_LABEL[f.severity]} | ${f.ruleId} | ${escText(f.message)}${extra ? ` <br>${escText(extra)}` : ""} |`,
+    );
   }
 }
 
@@ -92,7 +130,12 @@ export function renderWeighMarkdown(w: ServerWeighResult | SkillSetWeighResult):
     lines.push(`| Claude-style | ${w.totals.claudeStyle.toLocaleString("en-US")} |`);
     lines.push(`| OpenAI tools | ${w.totals.openaiTools.toLocaleString("en-US")} |`);
     if (w.anthropicExactTotal !== undefined) {
-      lines.push(`| anthropic exact (API) | ${w.anthropicExactTotal.toLocaleString("en-US")} |`);
+      // Names the model, like the terminal does. Without it the same figure
+      // was reproducible from --json and from pretty output but not from --md,
+      // which is the surface the CI docs recommend piping into a summary.
+      lines.push(
+        `| anthropic exact (count_tokens, ${escCode(w.anthropicExactModel ?? "model not recorded")}) | ${w.anthropicExactTotal.toLocaleString("en-US")} |`,
+      );
     }
     lines.push("");
     if (w.perTool.length) {
@@ -122,6 +165,71 @@ export function renderWeighMarkdown(w: ServerWeighResult | SkillSetWeighResult):
   }
   lines.push("");
   for (const note of w.notes) lines.push(`> ${esc(note)}`);
+  return lines.join("\n");
+}
+
+export function renderFindMarkdown(f: FindResult, findings: Finding[]): string {
+  const lines: string[] = [];
+  lines.push(`## efaimo find: ${f.distinct.count}/${f.distinct.total} tools own a distinct word`);
+  lines.push("");
+  lines.push(`target: \`${esc(f.label)}\``);
+  lines.push("");
+  lines.push(
+    `**distinct ${f.distinct.count}/${f.distinct.total} (${f.distinct.pct}%)** tools that own a word no other tool has. ` +
+      `Probe ${f.probe.returned}/${f.probe.total} (${f.probe.pct}%) returned by a simulated search for their own description.`,
+  );
+  lines.push("");
+  if (f.distinctVacuous) {
+    lines.push(`> **Distinct is vacuous here.** A one-tool catalog has nothing to be distinct from.`);
+    lines.push("");
+  }
+  if (f.windowCoversCatalog) {
+    lines.push(
+      `> **The probe is vacuous here.** ${f.toolCount} tools and a result window of ${f.method.topK}, so no tool can fall outside it.`,
+    );
+    lines.push("");
+  }
+  lines.push("| words | tool | vocabulary no other tool has | probe |");
+  lines.push("|---|---|---|---|");
+  const byWorst = [...f.perTool].sort((a, b) => {
+    const ar = a.rank ?? Number.POSITIVE_INFINITY;
+    const br = b.rank ?? Number.POSITIVE_INFINITY;
+    return a.ownTermCount - b.ownTermCount || br - ar || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  });
+  // Capped, like every other table here. Uncapped, a 3,000-tool catalog wrote
+  // 74 KB of rows and a large aggregate would blow GitHub's 1 MiB step-summary
+  // limit, failing the step it was meant to annotate.
+  const MD_ROWS = 50;
+  for (const t of byWorst.slice(0, MD_ROWS)) {
+    const own =
+      t.ownTermCount === 0
+        ? t.sharedWith.length
+          ? `none, every word also on ${t.sharedWith.map((s) => `\`${escCode(s)}\``).join(", ")}`
+          : "none"
+        : `\`${escCode(t.ownTerms.join(", "))}\`` +
+          (t.ownTermCount > t.ownTerms.length ? ` (+${t.ownTermCount - t.ownTerms.length})` : "");
+    // Blank when it has nothing to say, matching the terminal. A column of
+    // "ok" down every row is a value that never varies presented as a
+    // measurement, which is the thing renderFindPretty refuses to do.
+    const probe = t.rank === undefined ? "no description" : t.reachable ? "" : `rank ${t.rank}`;
+    lines.push(`| ${t.ownTermCount} | \`${escCode(t.name)}\` | ${own} | ${probe} |`);
+  }
+  if (byWorst.length > MD_ROWS) {
+    lines.push(`| | *(+${byWorst.length - MD_ROWS} more, see \`--json\`)* | | |`);
+  }
+  lines.push("");
+  lines.push("### findings");
+  lines.push("");
+  if (!findings.length) lines.push("no findability findings.");
+  else findingsTable(lines, findings);
+  lines.push("");
+  // A blank line between blockquotes, or CommonMark lazily continues them into
+  // one paragraph and five separate notes render as one wall of prose.
+  for (const note of f.notes) {
+    lines.push(`> ${escText(note)}`);
+    lines.push("");
+  }
+  lines.push(`<sub>efaimo v${VERSION}</sub>`);
   return lines.join("\n");
 }
 

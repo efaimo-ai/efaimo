@@ -98,3 +98,30 @@ export function deltaInterval(
   const hi = d + Math.sqrt((w.hi - p1) ** 2 + (p2 - o.lo) ** 2);
   return { lo: Math.round(Math.max(-1, lo) * 1000) / 10, hi: Math.round(Math.min(1, hi) * 1000) / 10 };
 }
+
+/**
+ * The smallest difference in pass rate this many trials per arm could ever
+ * call significant, in percentage points.
+ *
+ * A plan that cannot detect the effect it is looking for produces a green that
+ * means nothing, and the only place to notice that is before spending the
+ * tokens. So the dry run prints this: at 8 trials per arm nothing under about
+ * 50 points is reachable, which is worth knowing before paying for 32 API
+ * calls to find out.
+ *
+ * Computed by exhaustive search over every 2x2 the plan can produce, because
+ * the number of tables is small (trials is capped at 50, so at most 2,601
+ * Fisher evaluations) and a closed form for the exact test is not worth
+ * deriving. Returns Infinity when no outcome at this size reaches alpha.
+ */
+export function minimumDetectableDelta(trials: number, alpha = 0.05): number {
+  let best = Infinity;
+  for (let a = 0; a <= trials; a++) {
+    for (let b = 0; b < a; b++) {
+      if (fisherExactTwoSided(a, trials, b, trials) < alpha) {
+        best = Math.min(best, ((a - b) / trials) * 100);
+      }
+    }
+  }
+  return best;
+}

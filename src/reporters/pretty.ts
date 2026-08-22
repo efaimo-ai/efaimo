@@ -1,10 +1,11 @@
 import pc from "picocolors";
-import type { CheckReport, Finding, ServerWeighResult, SkillSetWeighResult } from "../core/types.js";
+import type { CheckReport, Finding, FindResult, ServerWeighResult, SkillSetWeighResult } from "../core/types.js";
 import type { CheckSkillResult } from "../check/check.js";
 import type { Scenario, TestReport } from "../testing/harness.js";
 import type { WeighDiff } from "../weigh/diff.js";
 import { formatWindowShare } from "../weigh/window.js";
 import { sortFindings } from "../core/grade.js";
+import { minimumDetectableDelta } from "../testing/stats.js";
 import { VERSION } from "../version.js";
 import { safeText } from "../util/safeText.js";
 
@@ -36,8 +37,24 @@ function n(x: number): string {
   return x.toLocaleString("en-US");
 }
 
+/**
+ * A value that has to stay inside one line of a table or one line of a
+ * finding.
+ *
+ * `safeText` strips control characters but deliberately keeps newlines,
+ * because a detail block is meant to be multi-line. That is the wrong default
+ * for a single cell: a tool named
+ * `nl_tool\n      9  forged_row      weather, forecast` renders as a SECOND
+ * row byte-identical in shape to a real one, and under `--no-color`, which is
+ * how CI logs read, there is no tell at all. The audited thing must not be
+ * able to write rows in the auditor's table.
+ */
+function cell(s: string): string {
+  return safeText(s).replace(/[\r\n]+/g, " ");
+}
+
 function renderFinding(lines: string[], f: Finding): void {
-  lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${safeText(f.message)}`);
+  lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${cell(f.message)}`);
   if (f.detail) {
     for (const d of safeText(f.detail).split("\n")) lines.push(paint(pc.dim, `          ${d}`));
   }
@@ -84,13 +101,30 @@ export function renderCheckPretty(report: CheckReport): string {
 export function renderScenarioPlan(s: Scenario): string {
   const calls = s.trials * 2 * 2;
   const firstLine = s.task.split("\n")[0]!.slice(0, 60);
+  const mde = minimumDetectableDelta(s.trials);
   return [
     paint(pc.dim, `efaimo v${VERSION}`),
     `test (dry run)  ${paint(pc.bold, s.name)}`,
     "",
     `  skill   ${s.skillName}`,
     `  model   ${s.model}`,
+    `  judge   ${s.judgeModel}${
+      s.judgeModel === s.model
+        ? paint(pc.yellow, "   (same model grades its own answers; set judge_model or --judge-model to separate them)")
+        : ""
+    }`,
     `  plan    ${s.trials} trials x 2 arms x (task + judge) = ${paint(pc.bold, String(calls))} API calls`,
+    // What this plan cannot detect, before any tokens are spent. A run that
+    // cannot reach significance produces a green that means nothing, and the
+    // only useful moment to learn that is now.
+    `  power   ${
+      Number.isFinite(mde)
+        ? `the smallest gap this size can call significant is ${paint(
+            mde > 40 ? pc.yellow : pc.dim,
+            `${mde.toFixed(0)} points`,
+          )}${mde > 40 ? paint(pc.yellow, "   (raise trials)") : ""}`
+        : paint(pc.red, "no outcome at this size can reach p < 0.05; raise trials")
+    }`,
     `  task    ${paint(pc.dim, firstLine + (s.task.length > 60 ? "..." : ""))}`,
     "",
     paint(pc.yellow, "dry run: no API calls made. add --live to run it (Claude models need ANTHROPIC_API_KEY, GPT models need OPENAI_API_KEY)."),
@@ -104,7 +138,7 @@ export function renderTestReportPretty(r: TestReport): string {
   const lines = [
     paint(pc.dim, `efaimo v${VERSION}`),
     `test  ${paint(pc.bold, r.scenario)}`,
-    `skill ${r.skill}   model ${r.model}`,
+    `skill ${r.skill}   model ${r.model}   judge ${r.judgeModel}${r.judgeModel === r.model ? paint(pc.dim, " (same model)") : ""}`,
     "",
     `  with skill     ${r.withSkill.passes}/${r.withSkill.scored} pass  (${r.withSkill.passRate.toFixed(0)}%)`,
     `  without skill  ${r.withoutSkill.passes}/${r.withoutSkill.scored} pass  (${r.withoutSkill.passRate.toFixed(0)}%)`,
@@ -140,7 +174,7 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
     const g = s.report.grade;
     const c = s.report.counts;
     lines.push(
-      `  ${gradeColor(g.letter, `${g.letter} (${String(g.score).padStart(3)})`)}  ${safeText(s.name).padEnd(nameW)}  ` +
+      `  ${gradeColor(g.letter, `${g.letter} (${String(g.score).padStart(3)})`)}  ${cell(s.name).padEnd(nameW)}  ` +
         `${paint(pc.red, String(c.error))}e ${paint(pc.yellow, String(c.warn))}w ${paint(pc.cyan, String(c.info))}i`,
     );
   }
@@ -149,7 +183,7 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
     lines.push("");
     lines.push(paint(pc.bold, "across the set"));
     for (const f of sortFindings(res.setFindings)) {
-      lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${safeText(f.message)}`);
+      lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${cell(f.message)}`);
     }
   }
 
@@ -157,7 +191,7 @@ export function renderSkillSetPretty(res: CheckSkillResult): string {
   if (flagged.length) {
     lines.push("");
     for (const s of flagged) {
-      lines.push(paint(pc.bold, `${safeText(s.name)}  ${gradeColor(s.report.grade.letter, s.report.grade.letter)}`));
+      lines.push(paint(pc.bold, `${cell(s.name)}  ${gradeColor(s.report.grade.letter, s.report.grade.letter)}`));
       for (const f of s.report.findings) {
         lines.push(`  ${sevGlyph(f)} ${paint(pc.bold, f.ruleId)}  ${safeText(f.message)}`);
         if (f.fixHint) lines.push(paint(pc.dim, `          fix: ${safeText(f.fixHint)}`));
@@ -182,7 +216,9 @@ export function renderServerWeighPretty(w: ServerWeighResult): string {
   lines.push(`  OpenAI tools    ${n(w.totals.openaiTools).padStart(8)}`);
   if (w.instructionsTokens > 0) lines.push(`  server instructions ${n(w.instructionsTokens).padStart(4)}`);
   if (w.anthropicExactTotal !== undefined) {
-    lines.push(`  ${paint(pc.green, "anthropic exact")} ${n(w.anthropicExactTotal).padStart(8)}   (count_tokens API)`);
+    lines.push(
+      `  ${paint(pc.green, "anthropic exact")} ${n(w.anthropicExactTotal).padStart(8)}   (count_tokens, ${safeText(w.anthropicExactModel ?? "model not recorded")})`,
+    );
   }
   if (w.perTool.length) {
     lines.push("");
@@ -195,10 +231,10 @@ export function renderServerWeighPretty(w: ServerWeighResult): string {
     // column in its own flagship demo. Capped so one pathological name cannot
     // push the numbers off a terminal.
     const shown = w.perTool.slice(0, 8);
-    const toolW = Math.min(38, Math.max(20, ...shown.map((t) => safeText(t.name).length)));
+    const toolW = Math.min(38, Math.max(20, ...shown.map((t) => cell(t.name).length)));
     for (const [i, t] of shown.entries()) {
       lines.push(
-        `  ${String(i + 1).padStart(2)}. ${safeText(t.name).padEnd(toolW)} ${n(t.tokens.claudeStyle).padStart(7)}   desc ${n(t.descriptionTokens)} | schema ${n(t.schemaTokens)}`,
+        `  ${String(i + 1).padStart(2)}. ${cell(t.name).padEnd(toolW)} ${n(t.tokens.claudeStyle).padStart(7)}   desc ${n(t.descriptionTokens)} | schema ${n(t.schemaTokens)}`,
       );
     }
     if (w.perTool.length > 8) lines.push(paint(pc.dim, `      (+${w.perTool.length - 8} more)`));
@@ -221,7 +257,7 @@ export function renderSkillWeighPretty(w: SkillSetWeighResult): string {
   lines.push(`  ${"skill".padEnd(28)} ${"metadata".padStart(8)} ${"body".padStart(9)} ${"lines".padStart(6)}  refs`);
   for (const s of w.perSkill) {
     lines.push(
-      `  ${safeText(s.name).padEnd(28)} ${n(s.metadataTokens).padStart(8)} ${n(s.bodyTokens).padStart(9)} ${String(s.bodyLines).padStart(6)}  ${s.refFileCount ? `${s.refFileCount} files ${n(s.refFileTokens)}` : "-"}`,
+      `  ${cell(s.name).padEnd(28)} ${n(s.metadataTokens).padStart(8)} ${n(s.bodyTokens).padStart(9)} ${String(s.bodyLines).padStart(6)}  ${s.refFileCount ? `${s.refFileCount} files ${n(s.refFileTokens)}` : "-"}`,
     );
   }
   lines.push("");
@@ -231,6 +267,176 @@ export function renderSkillWeighPretty(w: SkillSetWeighResult): string {
   lines.push("");
   for (const note of w.notes) lines.push(paint(pc.dim, `note: ${safeText(note)}`));
   return lines.join("\n");
+}
+
+/**
+ * `efaimo find`.
+ *
+ * Two numbers, both as fractions with their denominators printed, neither a
+ * letter. The first is a property of the catalog; the second is a simulation
+ * and is labelled as one on the line itself, because a saturated 100% next to
+ * a real measurement reads like a good score unless the page says otherwise.
+ */
+export function renderFindPretty(f: FindResult): string {
+  const lines: string[] = [];
+  lines.push(paint(pc.dim, `efaimo v${VERSION}`));
+  lines.push(`find mcp  ${paint(pc.bold, safeText(f.label))}`);
+  lines.push(
+    paint(
+      pc.dim,
+      `tools ${f.toolCount}   result window ${f.method.topK}   BM25 k1=${f.method.bm25.k1} b=${f.method.bm25.b}, ${f.method.queryTerms} query terms`,
+    ),
+  );
+  lines.push("");
+
+  // Coloured on the rule condition, not on invented cutoffs. An earlier
+  // version banded this at 95 and 80 percent, two numbers that appear in no
+  // rule, no doc and no ADR, inside the one command whose whole design note
+  // says it does not grade. Red means E141 fired; that is a threshold the
+  // ruleset already owns.
+  const dpct = f.distinct.pct;
+  const anyOwnsNothing = f.distinct.count < f.distinct.total;
+  const dcolor = f.distinctVacuous ? pc.dim : anyOwnsNothing ? pc.red : pc.green;
+  const dFrac = `${f.distinct.count}/${f.distinct.total} (${dpct}%)`;
+  const pFrac = `${f.probe.returned}/${f.probe.total} (${f.probe.pct}%)`;
+  // Pad on the plain text, never on the painted string: colour codes are bytes
+  // that padEnd counts and a terminal does not, which is how a coloured column
+  // ends up crooked in exactly the demo everyone screenshots.
+  const fracW = Math.max(dFrac.length, pFrac.length);
+  lines.push(
+    `distinct  ${paint(dcolor, dFrac)}${" ".repeat(fracW - dFrac.length)}` +
+      `   ${paint(pc.dim, "tools that own a word no other tool has")}`,
+  );
+  if (f.distinctVacuous) {
+    lines.push(
+      paint(pc.yellow, `          vacuous: a one-tool catalog has nothing to be distinct from, so this is 100% for any tool`),
+    );
+  }
+  lines.push(
+    `probe     ${paint(pc.dim, pFrac)}${" ".repeat(fracW - pFrac.length)}` +
+      `   ${paint(pc.dim, "returned by a simulated search for their own description")}`,
+  );
+  if (f.windowCoversCatalog) {
+    lines.push(
+      paint(pc.yellow, `          vacuous: ${f.toolCount} tools fit inside a window of ${f.method.topK}, so none can fall outside it`),
+    );
+  }
+  lines.push("");
+
+  // Worst first. A reader scanning the top of the table should be looking at
+  // the tools that cannot be told apart, not at an alphabetical list.
+  const byWorst = [...f.perTool].sort((a, b) => {
+    const ar = a.rank ?? Number.POSITIVE_INFINITY;
+    const br = b.rank ?? Number.POSITIVE_INFINITY;
+    return (
+      a.ownTermCount - b.ownTermCount ||
+      br - ar ||
+      (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+    );
+  });
+  const shown = byWorst.slice(0, 15);
+  const nameW = Math.min(34, Math.max(12, ...shown.map((t) => cell(t.name).length)));
+  lines.push(paint(pc.dim, `  words  ${"tool".padEnd(nameW)}  vocabulary no other tool has`));
+  for (const t of shown) {
+    const count =
+      t.ownTermCount === 0
+        ? paint(pc.red, "    0")
+        : t.ownTermCount === 1
+          ? paint(pc.yellow, "    1")
+          : paint(pc.green, String(t.ownTermCount).padStart(5));
+    let tail: string;
+    if (t.ownTermCount === 0) {
+      tail = paint(
+        pc.red,
+        t.sharedWith.length ? `none: every word also on ${cell(t.sharedWith.join(", "))}` : "none",
+      );
+    } else {
+      const more = t.ownTermCount - t.ownTerms.length;
+      tail = paint(pc.dim, cell(t.ownTerms.join(", ")) + (more > 0 ? ` (+${more})` : ""));
+    }
+    // The probe only ever appears as a flag on a row it failed. A column of
+    // "1" down the whole table would be a number that never varies presented
+    // as if it were a measurement.
+    const probe =
+      t.rank === undefined
+        ? paint(pc.red, "   [probe: no description]")
+        : t.reachable
+          ? ""
+          : paint(pc.red, `   [probe: rank ${t.rank}]`);
+    lines.push(`  ${count}  ${cell(t.name).padEnd(nameW)}  ${tail}${probe}`);
+  }
+  // Describe the hidden rows from the hidden rows, never from an assumption.
+  // This line used to read "(+N more, each owning at least one word)" without
+  // checking: on a catalog where all 18 tools owned nothing it printed that
+  // three lines under a `0/18` headline saying the opposite.
+  const hiddenRows = byWorst.slice(shown.length);
+  if (hiddenRows.length) {
+    const hiddenAtZero = hiddenRows.filter((t) => t.ownTermCount === 0).length;
+    lines.push(
+      paint(
+        pc.dim,
+        `         (+${hiddenRows.length} more` +
+          (hiddenAtZero ? `, ${hiddenAtZero} of them owning no word` : ", each owning at least one word") +
+          `; --json for all of them)`,
+      ),
+    );
+  }
+
+  return lines.join("\n");
+}
+
+/** The findings half of `efaimo find`, printed under the table. */
+export function renderFindFindingsPretty(f: FindResult, findings: Finding[]): string {
+  const lines: string[] = [""];
+  if (!findings.length) {
+    lines.push(paint(pc.green, "  no findability findings."));
+  } else {
+    for (const x of sortFindings(findings)) renderFinding(lines, x);
+  }
+  lines.push("");
+  for (const note of f.notes) {
+    // The two vacuity notes are already printed inline, in yellow, on the row
+    // the reader is looking at. Repeating them here as prose was the same
+    // warning twice in one screen; the data still carries them for --json and
+    // --md, where there is no inline row to carry it.
+    if (note.startsWith("VACUOUS")) continue;
+    for (const [i, line] of wrapNote(safeText(note)).entries()) {
+      lines.push(paint(pc.dim, i === 0 ? `note: ${line}` : `      ${line}`));
+    }
+  }
+  // What to do next. A clean run used to end on "no findability findings" and
+  // a rules URL, which tells a first-time reader nothing about how to keep it
+  // that way. `distinct` is named because it is the number that can fail at
+  // any catalog size; the probe cannot.
+  if (!f.distinctVacuous) {
+    lines.push(
+      paint(
+        pc.dim,
+        `gate it: efaimo find "<server>" --min-distinct ${Math.floor(f.distinct.pct)}` +
+          (f.distinct.pct < 100 ? "   (raise it as you fix the tools above)" : ""),
+      ),
+    );
+  }
+  lines.push(paint(pc.dim, `rules: ${DOCS_RULES}`));
+  return lines.join("\n");
+}
+
+/** Soft-wrap a long note at ~92 columns on word boundaries, so terminals do not ragged-wrap mid-number. */
+function wrapNote(s: string, width = 92): string[] {
+  const out: string[] = [];
+  for (const paragraph of s.split("\n")) {
+    let line = "";
+    for (const word of paragraph.split(/\s+/)) {
+      if (line && line.length + 1 + word.length > width) {
+        out.push(line);
+        line = word;
+      } else {
+        line = line ? `${line} ${word}` : word;
+      }
+    }
+    out.push(line);
+  }
+  return out;
 }
 
 export function renderDiffPretty(d: WeighDiff, opts: { maxTokens?: number; allowIncreasePct?: number }): string {

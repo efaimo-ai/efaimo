@@ -1,5 +1,6 @@
-import type { Finding, McpRuleContext } from "./types.js";
+import type { Finding, FindRuleContext, McpRuleContext } from "./types.js";
 import { MCP_RULES } from "../rules/mcp/index.js";
+import { FIND_RULES } from "../rules/find/index.js";
 
 /** Run a list of rules, isolating each: a broken rule must never break the audit. */
 export function runRules<Ctx>(rules: readonly { check(ctx: Ctx): Finding[] }[], ctx: Ctx): Finding[] {
@@ -34,4 +35,8 @@ export function runRules<Ctx>(rules: readonly { check(ctx: Ctx): Finding[] }[], 
 
 export function runMcpRules(ctx: McpRuleContext): Finding[] {
   return runRules(MCP_RULES, ctx);
+}
+
+export function runFindRules(ctx: FindRuleContext): Finding[] {
+  return runRules(FIND_RULES, ctx);
 }

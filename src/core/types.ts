@@ -160,6 +160,13 @@ export interface ServerWeighResult {
   instructionsTokens: number;
   /** Exact count via Anthropic count_tokens API, when a key was provided. */
   anthropicExactTotal?: number;
+  /**
+   * The model `anthropicExactTotal` was measured against. Always set when the
+   * total is: Claude model lines do not share a tokenizer, so the figure is
+   * exact for this model and approximate for any other, and a count printed
+   * without its model cannot be reproduced.
+   */
+  anthropicExactModel?: string;
   notes: string[];
 }
 
@@ -182,6 +189,102 @@ export interface SkillSetWeighResult {
 }
 
 export type WeighResult = ServerWeighResult | SkillSetWeighResult;
+
+/** One tool's result in the findability report (`efaimo find`). */
+export interface ToolFindEntry {
+  name: string;
+  /**
+   * Terms this tool has that no other tool in the catalog has.
+   *
+   * The primary signal, and the only one here that is not a model of anything:
+   * if this is empty, every word the tool contains also appears on some other
+   * tool, so no query can match it without also matching a competitor. That is
+   * a property of the catalog, provable by inspection, with no assumption
+   * about how anyone searches. Capped for display.
+   */
+  ownTerms: string[];
+  /** How many exclusive terms there are in total, before the display cap. */
+  ownTermCount: number;
+  /**
+   * How many of them survive if the searcher does not know the tool's name.
+   *
+   * Names are searchable, so a tool whose only exclusive word is its own name
+   * is findable in principle. It is not findable by anyone describing a task,
+   * which is the situation deferred loading creates. E146 is this number
+   * reaching zero while `ownTermCount` does not.
+   */
+  ownOutsideNameCount: number;
+  /** When ownTermCount is 0: tools whose vocabulary covers this one's (capped). */
+  sharedWith: string[];
+  /**
+   * The terms this tool's own description offers a searcher, most distinctive
+   * first. Never includes the tool's name: the point of the probe is that the
+   * person searching does not know it.
+   */
+  query: string[];
+  /** 1-based rank for that query. Undefined when the description offers no searchable word. */
+  rank?: number;
+  /** BM25 score for its own query, kept so a reader can check the arithmetic. */
+  score: number;
+  /** Tools that scored higher for this tool's own query (capped at 3). */
+  outrankedBy: string[];
+  /** Tools whose score is indistinguishable from this one's, so only the tie-break separates them. Capped for display. */
+  tiedWith: string[];
+  /** How many there are in total, before the display cap. */
+  tiedWithCount: number;
+  /** Rank falls inside the simulated result window. The per-tool form of `probe`. */
+  reachable: boolean;
+  /** Every token of the name is a generic word (E144). */
+  genericName: boolean;
+}
+
+export interface FindResult {
+  kind: "find";
+  label: string;
+  toolCount: number;
+  /** The whole method, carried with the numbers so a report is self-describing. */
+  method: {
+    tokenizer: string;
+    bm25: { k1: number; b: number };
+    queryTerms: number;
+    topK: number;
+  };
+  perTool: ToolFindEntry[];
+  /**
+   * The headline: how many tools own at least one word no other tool has.
+   * A measured proportion, deliberately not a letter grade (ADR-030).
+   */
+  distinct: { count: number; total: number; pct: number };
+  /**
+   * Secondary: how many tools a simulated BM25 search for their own
+   * description returns inside the result window.
+   *
+   * Named `probe` in the JSON, in the output and in the docs, all three. It
+   * was `reach` in one of them and `probe` in the others for a day, which is
+   * how someone scripting a gate on the number they saw printed ends up
+   * looking for a field that does not exist.
+   *
+   * Kept, and kept second, because it is the only number here that models the
+   * actual mechanism, and because it saturates: 100% on every real server
+   * measured. Treat it as a floor test that catches catastrophe, not as a
+   * ranking. See docs/METHODOLOGY.md.
+   */
+  probe: { returned: number; total: number; pct: number };
+  /** toolCount <= topK, which makes the probe figure 100% by construction. */
+  windowCoversCatalog: boolean;
+  /**
+   * toolCount < 2, which makes the DISTINCT figure 100% by construction: with
+   * one tool every term it has is trivially exclusive. `--min-distinct` cannot
+   * be evaluated in that state and refuses rather than passing.
+   */
+  distinctVacuous: boolean;
+  definitionTokens?: number;
+  /** Anthropic's guidance recommends tool search for a catalog this shape. */
+  deferRecommended: boolean;
+  /** Which of the checkable conditions fired, in words. Empty when none did. */
+  deferBecause: string[];
+  notes: string[];
+}
 
 export interface SkillInfo {
   dir: string;
@@ -239,6 +342,10 @@ export interface SkillRuleContext {
   weigh?: SkillSetWeighResult;
 }
 
+export interface FindRuleContext {
+  find: FindResult;
+}
+
 export interface McpRule {
   id: string;
   title: string;
@@ -251,4 +358,11 @@ export interface SkillRule {
   title: string;
   surface: "skill";
   check(ctx: SkillRuleContext): Finding[];
+}
+
+export interface FindRule {
+  id: string;
+  title: string;
+  surface: "find";
+  check(ctx: FindRuleContext): Finding[];
 }

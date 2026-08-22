@@ -138,4 +138,98 @@ describe.skipIf(!built)("cli e2e (built dist)", () => {
       expect(grade(strict.out)).toBeTruthy();
     });
   });
+
+  describe("find", () => {
+    const MCP = path.join(here, "fixtures", "mcp-server");
+    const server = "node " + path.join(MCP, "server.mjs");
+
+    it("reports both numbers with their denominators", () => {
+      const r = run(["find", "--stdio", server, "--timeout", "20"]);
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/distinct\s+3\/3/);
+      expect(r.out).toMatch(/probe\s+3\/3/);
+    });
+
+    it("says the probe is vacuous when the window covers the catalog", () => {
+      // Three tools and a window of five: no tool can fall outside it, so the
+      // 100% means nothing and the output has to say so on the page, not only
+      // in a doc nobody opens.
+      const r = run(["find", "--stdio", server, "--timeout", "20"]);
+      expect(r.out).toMatch(/vacuous/i);
+    });
+
+    it("emits a JSON envelope carrying the ruleset that produced it", () => {
+      const r = run(["find", "--stdio", server, "--json", "--timeout", "20"]);
+      expect(r.code).toBe(0);
+      const parsed = JSON.parse(r.out);
+      expect(parsed.kind).toBe("find");
+      expect(parsed.rulesVersion).toBe("2");
+      expect(parsed.data.distinct.total).toBe(3);
+      expect(parsed.data.method.bm25.k1).toBe(1.2);
+    });
+
+    it("--no-timestamp makes two runs byte-identical", () => {
+      // The point of the flag: an artifact that is committed or diffed must
+      // not change when nothing measured changed.
+      const a = run(["find", "--stdio", server, "--json", "--no-timestamp", "--timeout", "20"]);
+      const b = run(["find", "--stdio", server, "--json", "--no-timestamp", "--timeout", "20"]);
+      expect(a.out).toBe(b.out);
+      expect(a.out).not.toMatch(/generatedAt/);
+      // And the sabotage: with the stamp, they differ.
+      expect(JSON.parse(run(["find", "--stdio", server, "--json", "--timeout", "20"]).out).generatedAt).toBeTruthy();
+    });
+
+    it("--min-distinct passes a catalog where every tool owns a word", () => {
+      const r = run(["find", "--stdio", server, "--min-distinct", "100", "--timeout", "20"]);
+      expect(r.code).toBe(0);
+    });
+
+    it("--min-distinct fails a catalog with two vocabulary-identical tools", () => {
+      // The gate has to be able to go red against a real server, not only in a
+      // unit test with a hand-built catalog.
+      const r = run(["find", "--stdio", server, "--env", "FIXTURE_TOOLS=dup", "--min-distinct", "100", "--timeout", "20"]);
+      expect(r.code).toBe(1);
+      expect(r.err).toMatch(/below --min-distinct/);
+      expect(r.out).toMatch(/E141/);
+    });
+
+    it("refuses a skill path instead of pretending to search it", () => {
+      const r = run(["find", path.join(SKILLS, "good-skill"), "--timeout", "20"]);
+      expect(r.code).toBe(2);
+      expect(r.err).toMatch(/S103/);
+    });
+
+    it("rejects a --min-distinct above 100", () => {
+      const r = run(["find", "--stdio", server, "--min-distinct", "101", "--timeout", "20"]);
+      expect(r.code).toBe(2);
+      expect(r.err).toMatch(/percentage/);
+    });
+  });
+});
+
+describe.skipIf(!built)("find: gates that must not pass vacuously", () => {
+  const server = "node " + path.join(here, "fixtures", "mcp-server", "server.mjs");
+
+  it("refuses --min-distinct on a one-tool catalog instead of passing it", () => {
+    // With one tool every term is trivially exclusive, so the figure is 100%
+    // for any tool whatsoever. Exit 2, not 0: "this gate cannot be evaluated
+    // here" is a different fact from "this gate passed", and a CI run that
+    // silently goes green against a catalog nothing was measured on is the
+    // failure this command exists to name.
+    const r = run(["find", "--stdio", server, "--env", "FIXTURE_TOOLS=one", "--min-distinct", "100", "--timeout", "20"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/cannot be evaluated/);
+  });
+
+  it("still reports on a one-tool catalog, and says the number means nothing", () => {
+    const r = run(["find", "--stdio", server, "--env", "FIXTURE_TOOLS=one", "--timeout", "20"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/vacuous/i);
+  });
+
+  it("rejects a fractional --top, which printed one window and used another", () => {
+    const r = run(["find", "--stdio", server, "--top", "2.5", "--timeout", "20"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/whole number/);
+  });
 });

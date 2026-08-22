@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { VERSION } from "../src/version.js";
 import { MCP_RULES } from "../src/rules/mcp/index.js";
 import { SKILL_RULES } from "../src/rules/skill/index.js";
+import { FIND_RULES, isFindabilityRuleId } from "../src/rules/find/index.js";
+import { isReadinessRuleId } from "../src/rules/mcp/index.js";
+import { RULES_VERSION } from "../src/rules/version.js";
 import { loadClientServers } from "../src/targets/clientConfigs.js";
 import { resolveTarget } from "../src/targets/resolve.js";
 import { makeBadgeSvg, toShieldsEndpoint } from "../src/reporters/badge.js";
@@ -13,6 +16,9 @@ import { gradeFindings } from "../src/core/grade.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "..");
+
+/** Every rule the CLI can run, across all three families. */
+const ALL_RULES = [...MCP_RULES, ...SKILL_RULES, ...FIND_RULES];
 
 describe("meta", () => {
   it("VERSION matches package.json", () => {
@@ -35,14 +41,59 @@ describe("meta", () => {
   });
 
   it("rule ids are unique", () => {
-    const ids = [...MCP_RULES, ...SKILL_RULES].map((r) => r.id);
+    const ids = ALL_RULES.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("every rule id is documented in docs/RULES.md", () => {
     const rulesDoc = fs.readFileSync(path.join(root, "docs", "RULES.md"), "utf8");
-    for (const r of [...MCP_RULES, ...SKILL_RULES]) {
+    for (const r of ALL_RULES) {
       expect(rulesDoc, `RULES.md must document ${r.id}`).toContain(r.id);
+    }
+  });
+
+  // The rule inventory, pinned by hand.
+  //
+  // `rulesVersion` in every JSON envelope claims to say which ruleset produced
+  // a report, and a claim nothing checks is a comment. This is the check: add,
+  // remove or renumber a rule and this list fails, which puts the author in
+  // src/rules/version.ts deciding whether the version has to move.
+  //
+  // What it cannot do, stated so nobody trusts it further than it goes: it
+  // does not see a changed threshold or a rewritten matcher inside an existing
+  // rule. 0.1.2 fixed E123 so it finally matched `delete_file`, and every id
+  // in this list would have been identical before and after. That case is
+  // human discipline; this only guarantees the inventory.
+  //
+  // A literal list, not a hash: a reviewer can read `"E146"` appearing in a
+  // diff and know what happened, and a changed hash teaches them nothing and
+  // gets updated without thought.
+  it("the rule inventory is what src/rules/version.ts was last reasoned about", () => {
+    expect(ALL_RULES.map((r) => r.id).sort()).toEqual([
+      "E101", "E102", "E103", "E104", "E105", "E106", "E107", "E108", "E109",
+      "E110", "E111", "E112", "E113", "E114", "E115", "E116", "E117", "E118",
+      "E121", "E122", "E123", "E124", "E125", "E126", "E127", "E128", "E130",
+      "E141", "E142", "E143", "E144", "E145", "E146",
+      "S101", "S102", "S103", "S104", "S105", "S106",
+    ]);
+    // An empty family would pass the loops below without this. The dash guard
+    // further down this file makes the same assertion about its own harvest.
+    expect(FIND_RULES.length).toBe(6);
+    // The findability family arrived with ruleset "2". If this list ever
+    // changes again, that number has to move with it.
+    expect(RULES_VERSION).toBe("2");
+  });
+
+  it("findability rule ids do not collide with the readiness range", () => {
+    // `isReadinessRuleId` splits a check report into graded and ungraded
+    // halves with /^E1(0|1)\d$/. E14x has to stay outside it or a findability
+    // finding would be filed as a migration item.
+    for (const r of FIND_RULES) {
+      expect(isReadinessRuleId(r.id), `${r.id} must not read as a readiness rule`).toBe(false);
+      expect(isFindabilityRuleId(r.id)).toBe(true);
+    }
+    for (const r of MCP_RULES) {
+      expect(isFindabilityRuleId(r.id), `${r.id} must not read as a findability rule`).toBe(false);
     }
   });
 
