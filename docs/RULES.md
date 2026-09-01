@@ -6,14 +6,13 @@ Severities: **error** (will bite you), **warn** (should fix), **info** (worth kn
 Grade starts at 100; each error costs 15, each warning 5, each info 1.
 `A >= 90, B >= 80, C >= 70, D >= 60, else F`.
 
-Every JSON report carries a `rulesVersion` **(unreleased; `efaimo@0.1.2` omits
-the field)**. The tool version does not identify a ruleset on its own: a patch
+Every JSON report carries a `rulesVersion`. The tool version does not identify a ruleset on its own: a patch
 release can change what a rule fires on, so a published grade is only
 reproducible next to the ruleset that produced it.
 
 MCP checks split into **2026-07-28 readiness** (E101-E118) and **quality**
 (E121-E128 and E130, with no E129); skill checks are S1xx; **findability**
-(E141-E145) is a third family reported by `efaimo find` **(unreleased)**.
+(E141-E145) is a third family reported by `efaimo find`.
 **Only quality and skill findings are graded.** Readiness findings are reported as a separate, ungraded **migration
 diff**: the two answer different questions. The grade is what a model
 experiences from this tool surface; readiness is whether a 2026-07-28 client can
@@ -77,7 +76,7 @@ never reused, so a gap is permanent and is better stated than smoothed over.
 | S105 | info | instruction-injection patterns in the skill body or description (shallow heuristic, never a security verdict). **Reported but never scored** | internal |
 | S106 | error/warn/info | referenced file missing, escaping the skill dir (`..`), or nested more than one level deep | agentskills.io |
 
-## Findability (E141-E145) **(unreleased)**
+## Findability (E141-E145)
 
 Reported by `efaimo find`, never by `check`, and **never graded**. They answer a
 question the other two families do not: when a host marks tools

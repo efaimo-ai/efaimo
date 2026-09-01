@@ -49,8 +49,7 @@ and this file is where agents take orders.
 - **Lint a skill**
   `npx efaimo check --skill ./skills/` validates frontmatter, trigger quality,
   context budget, file references, and injection patterns.
-- **Check whether a search can single a tool out** *(unreleased: needs efaimo
-  0.2.0; `npx efaimo` installs 0.1.2, which has no `find` command)*
+- **Check whether a search can single a tool out**
   `npx efaimo find "npx -y <server>"` reports how many tools own a term no
   other tool in the catalog has. A tool that owns none cannot be matched by any
   query that does not also match a competitor, which matters once a host defers
@@ -63,9 +62,9 @@ and this file is where agents take orders.
 ## Reading the output
 
 Findings carry a stable rule id (E1xx MCP readiness, E12x-E13x MCP quality,
-E14x findability *(unreleased)*, S1xx skills) and a severity. The letter grade
+E14x findability, S1xx skills) and a severity. The letter grade
 covers quality and skill findings only; 2026-07-28 readiness items appear
-separately as an ungraded migration diff, and findability *(unreleased)* is a
+separately as an ungraded migration diff, and findability is a
 separate command with no grade at all. Token numbers are o200k estimates unless
 `--anthropic` is used, which names the model it measured against; see the
 methodology doc for the full method.

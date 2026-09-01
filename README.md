@@ -176,11 +176,7 @@ grade A (95)   quality: 0 errors  1 warning  0 info
 
 </details>
 
-### Can a search even single your tools out? *(unreleased)*
-
-> **`efaimo find` is not in `efaimo@0.1.2`, which is what `npx efaimo` installs
-> today.** Everything in this section describes `main`. The rest of this README
-> describes the published release.
+### Can a search even single your tools out?
 
 A host can mark tools `defer_loading: true`, which keeps their definitions out of
 the context window until a search returns them; Anthropic recommends turning that
@@ -306,8 +302,7 @@ And a mitigation you cannot measure is a mitigation you are trusting on faith:
 `weigh` reports the definitions your server actually ships, which is the input
 every mitigation operates on.
 
-**And there is a fourth reason we did not have when this section was written
-*(unreleased)*.** Deferring a tool does not remove the question, it replaces
+**And there is a fourth reason we did not have when this section was written.** Deferring a tool does not remove the question, it replaces
 it: a deferred tool that no search returns costs nothing and does nothing, so
 the thing worth measuring becomes whether each tool can be picked out of the
 catalog at all. `efaimo find` measures that, and on four public servers it
@@ -359,7 +354,7 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 | **S101 to S106** | skills: frontmatter and trigger quality, trigger collisions, context budget, reference integrity, injection hygiene |
 | **E101 to E118** | MCP 2026-07-28 readiness: deprecated primitives, statelessness, `server/discover`, `resultType`, cache fields, transport |
 | **E121 to E128, E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
-| **E141 to E146** *(unreleased)* | MCP findability: exclusive vocabulary, whether a search returns the tool, indistinguishable pairs, names that carry no domain word |
+| **E141 to E146** | MCP findability: exclusive vocabulary, whether a search returns the tool, indistinguishable pairs, names that carry no domain word |
 
 `E000` is not a finding about your server: it means one of efaimo's own rules
 threw and was skipped, so the report is incomplete. It is never scored.
@@ -368,7 +363,7 @@ Quality (E12x-E13x) and skill (S) findings set the letter grade; readiness
 findings (E101-E118) are reported as an ungraded migration diff, which
 `--strict-readiness` can turn into a non-zero exit
 without touching the grade. Findability findings (E14x) belong to `efaimo find`
-and never touch a grade either *(unreleased)*.
+and never touch a grade either.
 Every finding carries a stable id you can suppress or link. See
 [docs/RULES.md](./docs/RULES.md).
 
@@ -378,8 +373,7 @@ Every finding carries a stable id you can suppress or link. See
   no system prompt at all, which confounds the skill's content with having any
   system prompt), multi-turn tool-use trials, and judge calibration, so the
   experimental harness earns unqualified trust. A separately chosen judge model
-  and confidence intervals on the delta are done, the judge model on `main`
-  only *(unreleased)*.
+  and confidence intervals on the delta are done.
 - Readiness rules for the two 2026-07-28 changes that have none yet: the
   `Mcp-Method` / `Mcp-Name` request headers (SEP-2243), and Tasks moving out of
   core into the `io.modelcontextprotocol/tasks` extension (SEP-2663).

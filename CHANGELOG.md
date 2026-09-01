@@ -4,11 +4,7 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [0.2.0] - unreleased
-
-`main` is 0.2.0 and npm is 0.1.2, so they are different software until this
-publishes. Every doc line describing something in this section is annotated
-`(unreleased)` inline, per ADR-029. Replace the date above when the tag is cut.
+## [0.2.0] - 2026-09-02
 
 ### Added
 
@@ -262,7 +258,8 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
-[unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.2.0
 [0.1.2]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.2
 [0.1.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.1
 [0.1.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.0

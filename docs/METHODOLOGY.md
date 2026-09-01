@@ -136,8 +136,7 @@ Two things the judge does, which matter for reading a result:
   so on Sonnet 5, Opus 5 and their siblings the judge runs at the model's own
   default and its variance is part of the measurement. The report says so on
   every run that this applies to, rather than claiming a determinism it does
-  not have. **(unreleased; `efaimo@0.1.2` sends the parameter unconditionally,
-  which those models reject with a 400.)** The subject arm is unaffected: it
+  not have. The subject arm is unaffected: it
   wanted temperature 1, which is the default anyway;
 - a reply that is neither PASS nor FAIL is **excluded and counted separately**,
   not scored as a failure. A refusal or an API error is not evidence about the
@@ -145,7 +144,6 @@ Two things the judge does, which matter for reading a result:
   report also carries a **two-sided Fisher exact p on the unparseable counts**,
   and a skew significant at the same 0.05 makes the verdict `inconclusive`:
   two pass rates computed over different populations cannot be subtracted.
-  **(unreleased.)**
 
 ### What this design still cannot tell you
 
@@ -154,8 +152,7 @@ Named here rather than left for a reader to discover:
 - **The judge defaults to the same model as the subject**, so part of any
   measured effect is a model preferring its own output. `judge_model:` in the
   scenario, or `--judge-model`, points it at another model, and the report
-  prints both. Subject and judge may be different providers. **(unreleased;
-  `efaimo@0.1.2` always judges with the subject model.)**
+  prints both. Subject and judge may be different providers.
 - **The control arm receives no system prompt at all**, so "the skill's
   content" is confounded with "having any system prompt". A length-matched
   placebo is the fix and is not implemented.
@@ -164,7 +161,7 @@ Named here rather than left for a reader to discover:
 
 Treat a single scenario as evidence about that scenario.
 
-## `efaimo find`: findability **(unreleased)**
+## `efaimo find`: findability
 
 A host may mark tools `defer_loading: true`, which keeps their definitions out
 of the system-prompt prefix until a search returns them. Anthropic lists five
