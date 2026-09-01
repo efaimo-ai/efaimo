@@ -18,7 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        # Node 22 is the active LTS; Node 20 is EOL and below pnpm's floor.
+        # Node 22 is Maintenance LTS (since 2025-10-21, EOL 2027-04-30) and 24 is
+        # Active LTS; Node 20 is EOL and below pnpm's floor. On 2026-10-20 Node 24
+        # moves to Maintenance and 26 becomes LTS on 10-28: revisit this matrix then.
+        # (This comment said "Node 22 is the active LTS" until 2026-09-02.)
         node: [22, 24]
     runs-on: ${{ matrix.os }}
     steps:
