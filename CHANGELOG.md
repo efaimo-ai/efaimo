@@ -4,15 +4,11 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] 0.3.0
-
-Everything in this section is **(unreleased)**: it exists on `main` and not in
-what `npx efaimo` installs. These annotations come off in the commit BEFORE the
-tag, never in the tag commit, because registries render the tagged tree.
+## [0.3.0] - 2026-09-03
 
 ### Added
 
-- **`check --out` and `check --diff`** _(unreleased)_: what moved between two
+- **`check --out` and `check --diff`**: what moved between two
   audits of the same subject. Same grammar as `weigh --out` / `weigh --diff`,
   which is why it is a flag rather than a sixth subcommand. Nothing published
   says whether skills and MCP servers are getting heavier or whether their
@@ -24,7 +20,7 @@ tag, never in the tag commit, because registries render the tagged tree.
 
   - **Rules drift is a hard stop.** Different `rulesVersion` between the two
     runs means a moved grade cannot be attributed to the subject, because the
-    ruler moved too. `--allow-rules-drift` _(unreleased)_ proceeds and marks
+    ruler moved too. `--allow-rules-drift` proceeds and marks
     every grade line unattributable.
   - **An empty pairing fails.** Nothing in common is two reports about
     different subjects, not "no change".
@@ -34,7 +30,7 @@ tag, never in the tag commit, because registries render the tagged tree.
   - **A dominant mover is named beside its total**, because when one subject is
     most of a change, the total is about that subject and not the population.
 
-  `--fail-on-regression` _(unreleased)_ exits 1 when any subject present in
+  `--fail-on-regression` exits 1 when any subject present in
   both runs scored lower.
 
   Measured on the public skills corpus, 2026-07-17 pinned against 2026-09-03
@@ -42,7 +38,7 @@ tag, never in the tag commit, because registries render the tagged tree.
   +61.4% with one skill at 96.5% of that movement; grades 0 improved and 4
   worsened.
 
-- **`efaimo find` takes several servers** _(unreleased)_. Pass more than one
+- **`efaimo find` takes several servers**. Pass more than one
   and their catalogs are merged into one and measured together, each tool
   labelled with where it came from. A flag-shaped change rather than a new
   subcommand, because the engine already took a flat tool array and only the
@@ -69,7 +65,7 @@ tag, never in the tag commit, because registries render the tagged tree.
 
 ### Fixed
 
-- **S102 no longer passes filler** _(unreleased)_. The rule read
+- **S102 no longer passes filler**. The rule read
   `description.length < 20` and then asked only whether one of four trigger
   words appeared anywhere, so `Useful for various tasks.` scored a clean
   A (100) in silence because "for" sits inside "for various tasks". It was
@@ -95,7 +91,7 @@ tag, never in the tag commit, because registries render the tagged tree.
 ### Known
 
 - **`check --skill <dir>` does not find every skill under a tree**
-  _(unreleased note, the behaviour is in 0.2.0 too)_. It walks
+  _(present in 0.2.0 as well)_. It walks
   `<root>/<name>/SKILL.md` and `<root>/skills/<name>/SKILL.md` but misses skills
   inside a dot directory (`.claude/skills/<name>/`) and skills one level deeper
   (`skills/custom_skills/<name>/`). On the corpus above it found 34 where
@@ -359,7 +355,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
-[unreleased]: https://github.com/efaimo-ai/efaimo/compare/v0.2.0...HEAD
+[0.3.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.3.0
 [0.2.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.2.0
 [0.1.2]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.2
 [0.1.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.1
