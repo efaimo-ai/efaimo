@@ -1,0 +1,794 @@
+{
+  "tool": "efaimo",
+  "version": "0.2.0",
+  "generatedAt": "2026-09-02",
+  "corpus": {
+    "fetchedAt": "2026-09-02T17:18:41.297Z",
+    "sources": [
+      {
+        "dir": "anthropics-skills",
+        "repo": "https://github.com/anthropics/skills",
+        "commit": "53048666b05b4799081517d00e09e0a2dd688678"
+      },
+      {
+        "dir": "anthropics-claude-cookbooks",
+        "repo": "https://github.com/anthropics/claude-cookbooks",
+        "commit": "26b5cdce81d357596f5df7f44f50908a80be40cf"
+      },
+      {
+        "dir": "obra-superpowers",
+        "repo": "https://github.com/obra/superpowers",
+        "commit": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797"
+      }
+    ]
+  },
+  "skills": [
+    {
+      "name": "writing-skills",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 80,
+        "letter": "B"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 4,
+        "info": 0
+      },
+      "ruleIds": [
+        "S104",
+        "S104",
+        "S106",
+        "S106"
+      ],
+      "meta": 20,
+      "body": 5814,
+      "bodyLines": 675,
+      "refFiles": 1,
+      "refTokens": 2866
+    },
+    {
+      "name": "writing-plans",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 21,
+      "body": 1567,
+      "bodyLines": 167,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "verification-before-completion",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 43,
+      "body": 804,
+      "bodyLines": 116,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "using-superpowers",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 28,
+      "body": 677,
+      "bodyLines": 59,
+      "refFiles": 4,
+      "refTokens": 2290
+    },
+    {
+      "name": "using-git-worktrees",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 36,
+      "body": 1580,
+      "bodyLines": 163,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "test-driven-development",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 17,
+      "body": 2187,
+      "bodyLines": 316,
+      "refFiles": 1,
+      "refTokens": 1779
+    },
+    {
+      "name": "systematic-debugging",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 21,
+      "body": 2156,
+      "bodyLines": 279,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "subagent-driven-development",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 85,
+        "letter": "B"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 3,
+        "info": 0
+      },
+      "ruleIds": [
+        "S104",
+        "S104",
+        "S106"
+      ],
+      "meta": 17,
+      "body": 7457,
+      "bodyLines": 564,
+      "refFiles": 3,
+      "refTokens": 4511
+    },
+    {
+      "name": "requesting-code-review",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 22,
+      "body": 652,
+      "bodyLines": 91,
+      "refFiles": 1,
+      "refTokens": 1277
+    },
+    {
+      "name": "receiving-code-review",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 38,
+      "body": 1415,
+      "bodyLines": 201,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 27,
+      "body": 1893,
+      "bodyLines": 221,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "executing-plans",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 22,
+      "body": 475,
+      "bodyLines": 60,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 26,
+      "body": 1330,
+      "bodyLines": 163,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "brainstorming",
+      "source": "obra-superpowers",
+      "grade": {
+        "score": 99,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 1
+      },
+      "ruleIds": [
+        "S104"
+      ],
+      "meta": 37,
+      "body": 3362,
+      "bodyLines": 246,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "template-skill",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 95,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 1,
+        "info": 0
+      },
+      "ruleIds": [
+        "S101"
+      ],
+      "meta": 17,
+      "body": 5,
+      "bodyLines": 2,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "xlsx",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 99,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 1
+      },
+      "ruleIds": [
+        "S106"
+      ],
+      "meta": 206,
+      "body": 1921,
+      "bodyLines": 94,
+      "refFiles": 1,
+      "refTokens": 1587
+    },
+    {
+      "name": "webapp-testing",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 35,
+      "body": 835,
+      "bodyLines": 90,
+      "refFiles": 1,
+      "refTokens": 831
+    },
+    {
+      "name": "web-artifacts-builder",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 64,
+      "body": 621,
+      "bodyLines": 68,
+      "refFiles": 2,
+      "refTokens": 3356
+    },
+    {
+      "name": "theme-factory",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 62,
+      "body": 582,
+      "bodyLines": 53,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "slack-gif-creator",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 51,
+      "body": 1929,
+      "bodyLines": 249,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "skill-creator",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 95,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 1,
+        "info": 0
+      },
+      "ruleIds": [
+        "S104"
+      ],
+      "meta": 64,
+      "body": 7197,
+      "bodyLines": 481,
+      "refFiles": 6,
+      "refTokens": 15263
+    },
+    {
+      "name": "pptx",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 94,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 1,
+        "info": 1
+      },
+      "ruleIds": [
+        "S104",
+        "S106"
+      ],
+      "meta": 171,
+      "body": 5144,
+      "bodyLines": 233,
+      "refFiles": 1,
+      "refTokens": 1587
+    },
+    {
+      "name": "pdf",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 92,
+      "body": 1980,
+      "bodyLines": 309,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "mcp-builder",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 96,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 4
+      },
+      "ruleIds": [
+        "S106",
+        "S106",
+        "S106",
+        "S106"
+      ],
+      "meta": 61,
+      "body": 1872,
+      "bodyLines": 231,
+      "refFiles": 4,
+      "refTokens": 18832
+    },
+    {
+      "name": "internal-comms",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 67,
+      "body": 240,
+      "bodyLines": 27,
+      "refFiles": 4,
+      "refTokens": 2086
+    },
+    {
+      "name": "frontend-design",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 39,
+      "body": 1591,
+      "bodyLines": 50,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "docx",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 184,
+      "body": 1565,
+      "bodyLines": 86,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "doc-coauthoring",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 99,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 1
+      },
+      "ruleIds": [
+        "S104"
+      ],
+      "meta": 77,
+      "body": 3186,
+      "bodyLines": 371,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "discernment-nudge",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 203,
+      "body": 2191,
+      "bodyLines": 189,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "claude-api",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 72,
+        "letter": "C"
+      },
+      "counts": {
+        "error": 1,
+        "warn": 2,
+        "info": 5
+      },
+      "ruleIds": [
+        "S101",
+        "S104",
+        "S104",
+        "S104",
+        "S105",
+        "S105",
+        "S106",
+        "S106"
+      ],
+      "meta": 294,
+      "body": 21289,
+      "bodyLines": 562,
+      "refFiles": 25,
+      "refTokens": 163786
+    },
+    {
+      "name": "canvas-design",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 59,
+      "body": 2287,
+      "bodyLines": 124,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "brand-guidelines",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 49,
+      "body": 455,
+      "bodyLines": 68,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "algorithmic-art",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 1
+      },
+      "ruleIds": [
+        "S105"
+      ],
+      "meta": 62,
+      "body": 4102,
+      "bodyLines": 399,
+      "refFiles": 1,
+      "refTokens": 4238
+    },
+    {
+      "name": "academy-guide",
+      "source": "anthropics-skills",
+      "grade": {
+        "score": 85,
+        "letter": "B"
+      },
+      "counts": {
+        "error": 1,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [
+        "S106"
+      ],
+      "meta": 208,
+      "body": 1566,
+      "bodyLines": 128,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "creating-financial-models",
+      "source": "anthropics-claude-cookbooks",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 32,
+      "body": 954,
+      "bodyLines": 169,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "applying-brand-guidelines",
+      "source": "anthropics-claude-cookbooks",
+      "grade": {
+        "score": 99,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 1
+      },
+      "ruleIds": [
+        "S102"
+      ],
+      "meta": 27,
+      "body": 1213,
+      "bodyLines": 167,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "analyzing-financial-statements",
+      "source": "anthropics-claude-cookbooks",
+      "grade": {
+        "score": 100,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 0
+      },
+      "ruleIds": [],
+      "meta": 23,
+      "body": 479,
+      "bodyLines": 65,
+      "refFiles": 0,
+      "refTokens": 0
+    },
+    {
+      "name": "cookbook-audit",
+      "source": "anthropics-claude-cookbooks",
+      "grade": {
+        "score": 99,
+        "letter": "A"
+      },
+      "counts": {
+        "error": 0,
+        "warn": 0,
+        "info": 1
+      },
+      "ruleIds": [
+        "S104"
+      ],
+      "meta": 26,
+      "body": 2638,
+      "bodyLines": 268,
+      "refFiles": 0,
+      "refTokens": 0
+    }
+  ],
+  "ours": []
+}

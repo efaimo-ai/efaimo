@@ -58,6 +58,13 @@ instructions, and the median skill's instructions run ~1,632 tokens loaded on
 every trigger. Full report, the corpus manifest, and the two commands that
 reproduce it: [the Skills Quality Index](./research/skills-index/REPORT.md).
 
+That index is a photograph. [Measured twice](./research/skills-delta-2026-09-03/REPORT.md)
+re-runs the same corpus seven weeks later with the same ruleset: the cost that
+sits in context permanently moved -0.8%, the body +7.0%, and referenced files,
+which load out of sight and which no rule here counts, +61.4%. Grades moved one
+way only, 0 improved against 4 worse. The uncomfortable part points inward: the
+two columns this tool has thresholds for are the two that held.
+
 ### Does the skill actually help? (experimental)
 
 Linting tells you a skill is well-formed. It does not tell you the skill makes the
