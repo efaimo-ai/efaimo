@@ -34,9 +34,17 @@ All notable changes to efaimo are documented here. Format follows
   both runs scored lower.
 
   Measured on the public skills corpus, 2026-07-17 pinned against 2026-09-03
-  HEAD, same ruleset both sides: metadata -0.8%, body +7.5%, referenced files
-  +61.4% with one skill at 96.5% of that movement; grades 0 improved and 4
-  worsened.
+  HEAD, same ruleset both sides, over the **32 skills `check --skill` pairs**:
+  metadata -0.8%, body +7.5%, referenced files +61.4% with one skill at 96.5%
+  of that movement; grades 0 improved and 4 worsened.
+
+  The population matters and is worth stating, because
+  `research/skills-delta-2026-09-03/REPORT.md` reports body **+7.0%** over
+  **36** paired skills for the same corpus on the same dates. Both are true.
+  `scripts/skills-index.mjs` finds four skills that `check --skill` does not,
+  for the walker reason in Known below, so the two are measuring slightly
+  different populations. Every other figure is identical between them; the
+  body percentage is the one the four missing skills move.
 
 - **`efaimo find` takes several servers**. Pass more than one
   and their catalogs are merged into one and measured together, each tool

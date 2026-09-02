@@ -26,6 +26,8 @@ node scripts/skills-index.mjs .corpus-sep --json sep.json
 
 Raw output for both dates sits beside this file: `index-2026-07-17.json`, `index-2026-09-03.json`.
 
+Every figure below is over the **36 skills paired by `scripts/skills-index.mjs`**. The 0.3.0 changelog reports the same corpus over the **32** that `check --skill` pairs, because its walker misses four of them (`.claude/skills/<name>/` and one level deeper). Only the body percentage differs between the two populations, +7.0% here against +7.5% there; everything else is identical.
+
 ## Two controls, because a delta is the shape a broken measurement takes
 
 **The instrument did not move.** Both runs and the published index all report `efaimo 0.2.0`. More than that, the July re-run reproduces the committed index across all 36 rows, field for field: name, source, grade, counts, ruleIds, meta, body, bodyLines, refFiles, refTokens. Had the ruleset shifted underneath, that comparison would have failed first.
