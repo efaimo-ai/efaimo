@@ -42,6 +42,31 @@ tag, never in the tag commit, because registries render the tagged tree.
   +61.4% with one skill at 96.5% of that movement; grades 0 improved and 4
   worsened.
 
+### Fixed
+
+- **S102 no longer passes filler** _(unreleased)_. The rule read
+  `description.length < 20` and then asked only whether one of four trigger
+  words appeared anywhere, so `Useful for various tasks.` scored a clean
+  A (100) in silence because "for" sits inside "for various tasks". It was
+  testing for the presence of a trigger WORD rather than for the presence of a
+  trigger. A skill whose whole body was one sentence also scored 100.
+
+  Two floors replace it, both grounded on the 38 public skills in
+  `research/skills-index/manifest.json` measured 2026-09-03, where the shortest
+  real description is 68 characters and the thinnest carries 4 distinct content
+  terms: under 40 characters, or fewer than 4 distinct terms surviving the
+  stopword list, is a warning. The second is the same measurement `find` makes
+  on tool catalogs, since a description with no distinguishing content cannot
+  be matched to a task whatever words it contains.
+
+  Impact on the corpus: none. The 38 skills produce zero S102 findings before
+  and after, and the grade distribution is unchanged. This was found by
+  sabotaging the grader while reviewing two new skills, not by a report.
+
+  Note that this changes grades in principle, so it is deliberately sequenced
+  after the 2026-09-03 delta measurement, whose reproduction is pinned to
+  `v0.2.0`.
+
 ### Known
 
 - **`check --skill <dir>` does not find every skill under a tree**

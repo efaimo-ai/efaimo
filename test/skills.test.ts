@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import path from "node:path";
+import fs from "node:fs";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { findSkills, parseSkillFile } from "../src/skills/parse.js";
 import { checkSkillSet } from "../src/check/check.js";
@@ -105,5 +107,59 @@ describe("skill parsing", () => {
     expect(w.totals.body).toBeGreaterThan(0);
     const heavy = w.perSkill.find((s) => s.name === "heavy-skill");
     expect(heavy!.bodyTokens).toBeGreaterThan(5000);
+  });
+});
+
+describe("S102 after 2026-09-03", () => {
+  // Until this date the rule read `desc.length < 20`, then asked only whether
+  // one of four trigger words appeared anywhere in the description. So
+  // "Useful for various tasks." scored a clean 100 in silence, because "for"
+  // sits inside "for various tasks": it tested for the presence of a trigger
+  // WORD rather than for the presence of a trigger. Both floors are grounded
+  // on the 38 public skills in research/skills-index/manifest.json, whose
+  // shortest description is 68 characters and whose thinnest carries 4
+  // distinct content terms.
+  async function s102(description: string) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-s102-"));
+    const dir = path.join(root, "probe");
+    fs.mkdirSync(dir);
+    fs.writeFileSync(
+      path.join(dir, "SKILL.md"),
+      `---
+name: probe
+description: ${description}
+---
+
+# probe
+
+A body long enough to be ordinary.
+`,
+    );
+    try {
+      const res = await checkSkillSet(root, "probe");
+      return res.perSkill[0]!.report.findings.filter((f) => f.ruleId === "S102");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+
+  it("flags the filler that used to score 100", async () => {
+    const f = await s102("Useful for various tasks.");
+    expect(f).toHaveLength(1);
+    expect(f[0]!.message).toMatch(/only 25 chars/);
+  });
+
+  it("flags a description that clears the length floor but says nothing", async () => {
+    const f = await s102("Use this for the thing when you use it for the thing you use.");
+    expect(f).toHaveLength(1);
+    expect(f[0]!.message).toMatch(/1 distinct content term once/);
+  });
+
+  it("stays silent on a real description", async () => {
+    expect(
+      await s102(
+        "Use before trusting any check that came back clean, such as a grep with no matches or a green CI gate, whenever you are about to report no issues found.",
+      ),
+    ).toEqual([]);
   });
 });

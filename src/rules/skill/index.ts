@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Finding, SkillRule } from "../../core/types.js";
 import { scanTextForInjection } from "../injection.js";
+import { tokenize, QUERY_STOPWORDS } from "../../find/tokenize.js";
 import { formatTokens } from "../../util/misc.js";
 
 const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -84,6 +85,15 @@ const s101: SkillRule = {
   },
 };
 
+// Grounded on the 38 public skills in research/skills-index/manifest.json,
+// measured 2026-09-03. The shortest real description there is 68 characters
+// (`template-skill`) and the fewest content terms any of them carries is 4,
+// also `template-skill`. Both floors sit below every real description in that
+// corpus and above the filler this rule exists to catch, and both are far
+// under the spec's 1024-character ceiling.
+const S102_MIN_CHARS = 40;
+const S102_MIN_CONTENT_TERMS = 4;
+
 const s102: SkillRule = {
   id: "S102",
   title: "weak trigger description",
@@ -93,7 +103,19 @@ const s102: SkillRule = {
     if (!desc) return []; // S101 already errors
     const findings: Finding[] = [];
     const label = skillLabel(skill);
-    if (desc.length < 20) {
+    // The content this description carries once the words every description
+    // contains are removed. A length floor alone was not enough: until
+    // 2026-09-03 this rule read `desc.length < 20`, then asked only whether one
+    // of four trigger words appeared anywhere, so "Useful for various tasks."
+    // scored a clean 100 because "for" happens to sit inside "for various
+    // tasks". It tested for the presence of a trigger WORD rather than for the
+    // presence of a trigger, which is a keyword check wearing the costume of a
+    // semantic one. Counting what survives the stopword list is the same
+    // measurement `find` makes on tool catalogs: a description with almost no
+    // distinguishing content cannot be matched to a task by any host, whatever
+    // words it happens to include.
+    const contentTerms = new Set(tokenize(desc).filter((w) => !QUERY_STOPWORDS.has(w)));
+    if (desc.length < S102_MIN_CHARS) {
       findings.push({
         ruleId: "S102",
         severity: "warn",
@@ -101,6 +123,15 @@ const s102: SkillRule = {
         message: `description is only ${desc.length} chars; too thin for hosts to match against tasks`,
         target: label,
         fixHint: "state what the skill does AND when to use it, with concrete trigger words",
+      });
+    } else if (contentTerms.size < S102_MIN_CONTENT_TERMS) {
+      findings.push({
+        ruleId: "S102",
+        severity: "warn",
+        title: "weak trigger description",
+        message: `description carries only ${contentTerms.size} distinct content ${contentTerms.size === 1 ? "term" : "terms"} once common words are removed; there is nothing here for a host to match a task against`,
+        target: label,
+        fixHint: "name the situations, artifacts and words a user would actually type",
       });
     } else if (!/\buse\b|\bwhen\b|\bfor\b|\bhelps?\b/i.test(desc)) {
       findings.push({
