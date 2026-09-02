@@ -3,6 +3,7 @@ import type { CheckReport, Finding, FindResult, ServerWeighResult, SkillSetWeigh
 import type { CheckSkillResult } from "../check/check.js";
 import type { Scenario, TestReport } from "../testing/harness.js";
 import type { WeighDiff } from "../weigh/diff.js";
+import type { CheckDiffResult } from "../check/diff.js";
 import { formatWindowShare } from "../weigh/window.js";
 import { sortFindings } from "../core/grade.js";
 import { minimumDetectableDelta } from "../testing/stats.js";
@@ -457,5 +458,72 @@ export function renderDiffPretty(d: WeighDiff, opts: { maxTokens?: number; allow
   if (opts.allowIncreasePct !== undefined && d.pct > opts.allowIncreasePct) {
     lines.push(paint(pc.red, `increase ${d.pct.toFixed(1)}% > --allow-increase ${opts.allowIncreasePct}%`));
   }
+  return lines.join("\n");
+}
+
+/**
+ * What moved between two `check` runs.
+ *
+ * The three token columns stay in three rows on purpose. Summing them gives a
+ * single percentage that is arithmetically true and describes none of the
+ * three costs, because metadata is carried permanently while referenced files
+ * load only on demand, and in practice almost all movement lands in the column
+ * that costs the least to hold. A dominant mover is printed beside its total
+ * for the same reason: when one subject is most of a change, the total is
+ * about that subject rather than about the population.
+ */
+export function renderCheckDiffPretty(d: CheckDiffResult): string {
+  const lines: string[] = [];
+  lines.push(paint(pc.dim, `efaimo v${VERSION}`));
+  const rules = d.rulesVersions.before ?? "?";
+  lines.push(
+    `diff check  ${paint(pc.bold, `${d.paired} paired`)}${d.added.length ? `, ${d.added.length} added` : ""}${d.removed.length ? `, ${d.removed.length} removed` : ""}`,
+  );
+  lines.push(
+    paint(
+      pc.dim,
+      d.rulesDrift
+        ? `efaimo ${d.versions.before} -> ${d.versions.after}, rules ${d.rulesVersions.before} -> ${d.rulesVersions.after}  DRIFTED`
+        : `efaimo ${d.versions.before} -> ${d.versions.after}, rules ${rules} on both sides`,
+    ),
+  );
+  lines.push("");
+
+  const sign = (n: number) => (n > 0 ? `+${n.toLocaleString("en-US")}` : n.toLocaleString("en-US"));
+  const pct = (n: number) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+
+  lines.push(paint(pc.bold, "grades"));
+  if (d.rulesDrift) {
+    lines.push(`  ${paint(pc.yellow, "unattributable")}: the ruleset changed between the runs, so a moved grade may be the ruler`);
+  }
+  const g = (m: { name: string; before: { score: number; letter: string }; after: { score: number; letter: string } }) =>
+    `  ${m.name.padEnd(34)} ${m.before.letter} (${m.before.score}) -> ${m.after.letter} (${m.after.score})`;
+  for (const m of d.improved) lines.push(paint(pc.green, g(m)));
+  for (const m of d.worsened) lines.push(paint(pc.red, g(m)));
+  lines.push(
+    paint(pc.dim, `  improved ${d.improved.length}   worsened ${d.worsened.length}   held ${d.held}   findings ${d.findingCounts.before} -> ${d.findingCounts.after}`),
+  );
+  lines.push("");
+
+  if (d.costs.length) {
+    lines.push(paint(pc.bold, "token cost, by when it loads"));
+    for (const c of d.costs) {
+      const color = c.delta > 0 ? pc.yellow : c.delta < 0 ? pc.green : pc.dim;
+      lines.push(
+        `  ${c.column.padEnd(11)} ${paint(pc.dim, `(${c.when})`.padEnd(20))} ${String(c.before.toLocaleString("en-US")).padStart(9)} -> ${String(c.after.toLocaleString("en-US")).padStart(9)}  ${paint(color, pct(c.pct))}`,
+      );
+      if (c.dominatedBy) {
+        lines.push(
+          paint(
+            pc.dim,
+            `              ${c.dominatedBy.name} is ${c.dominatedBy.shareOfMovement.toFixed(1)}% of that movement (${sign(c.dominatedBy.delta)}); the total describes it, not the rest`,
+          ),
+        );
+      }
+    }
+    lines.push("");
+  }
+
+  for (const n of d.notes) lines.push(paint(pc.dim, `  ${n}`));
   return lines.join("\n");
 }

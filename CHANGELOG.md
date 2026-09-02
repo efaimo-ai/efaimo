@@ -4,6 +4,57 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] 0.3.0
+
+Everything in this section is **(unreleased)**: it exists on `main` and not in
+what `npx efaimo` installs. These annotations come off in the commit BEFORE the
+tag, never in the tag commit, because registries render the tagged tree.
+
+### Added
+
+- **`check --out` and `check --diff`** _(unreleased)_: what moved between two
+  audits of the same subject. Same grammar as `weigh --out` / `weigh --diff`,
+  which is why it is a flag rather than a sixth subcommand. Nothing published
+  says whether skills and MCP servers are getting heavier or whether their
+  quality holds, because that needs the same thing measured twice and nothing
+  made the comparison cheap.
+
+  A delta is exactly the shape a broken measurement takes, so the controls a
+  careful person would run by hand are enforced instead of documented:
+
+  - **Rules drift is a hard stop.** Different `rulesVersion` between the two
+    runs means a moved grade cannot be attributed to the subject, because the
+    ruler moved too. `--allow-rules-drift` _(unreleased)_ proceeds and marks
+    every grade line unattributable.
+  - **An empty pairing fails.** Nothing in common is two reports about
+    different subjects, not "no change".
+  - **The three token costs are never summed.** Metadata is carried
+    permanently, the body loads on trigger, referenced files load on demand;
+    one combined percentage would describe none of them.
+  - **A dominant mover is named beside its total**, because when one subject is
+    most of a change, the total is about that subject and not the population.
+
+  `--fail-on-regression` _(unreleased)_ exits 1 when any subject present in
+  both runs scored lower.
+
+  Measured on the public skills corpus, 2026-07-17 pinned against 2026-09-03
+  HEAD, same ruleset both sides: metadata -0.8%, body +7.5%, referenced files
+  +61.4% with one skill at 96.5% of that movement; grades 0 improved and 4
+  worsened.
+
+### Known
+
+- **`check --skill <dir>` does not find every skill under a tree**
+  _(unreleased note, the behaviour is in 0.2.0 too)_. It walks
+  `<root>/<name>/SKILL.md` and `<root>/skills/<name>/SKILL.md` but misses skills
+  inside a dot directory (`.claude/skills/<name>/`) and skills one level deeper
+  (`skills/custom_skills/<name>/`). On the corpus above it found 34 where
+  `scripts/skills-index.mjs` found 38, all four in the same repository. Two of
+  this tool's own walkers disagreeing about the same tree is a defect whichever
+  is right; a `--diff` built on the narrower walk silently compares an
+  incomplete population. Not fixed here because the fix is a design decision
+  about depth and dot directories, separate from this change.
+
 ## [0.2.0] - 2026-09-02
 
 ### Added

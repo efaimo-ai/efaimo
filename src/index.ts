@@ -14,6 +14,7 @@ export { loadClientServers, SUPPORTED_CLIENTS } from "./targets/clientConfigs.js
 export { introspectServer } from "./clients/introspect.js";
 export { weighServer, weighSkills } from "./weigh/weigh.js";
 export { diffServerWeigh, type WeighDiff } from "./weigh/diff.js";
+export { diffCheck, flattenCheck, CheckDiffRefused, type CheckDiffResult, type CheckDiffItem } from "./check/diff.js";
 export { countTokens } from "./weigh/tokens.js";
 
 // Skills

@@ -11,6 +11,7 @@ import { SPEC_VERSION } from "./clients/rawprobe.js";
 import { weighServer, weighSkills } from "./weigh/weigh.js";
 import { findSkills } from "./skills/parse.js";
 import { diffServerWeigh } from "./weigh/diff.js";
+import { diffCheck, CheckDiffRefused, type CheckEnvelope } from "./check/diff.js";
 import { DEFAULT_CONTEXT_WINDOW, formatWindowShare, setContextWindow } from "./weigh/window.js";
 import { checkMcpRepoOnly, checkMcpTarget, checkSkillSet, type CheckSkillResult } from "./check/check.js";
 import { analyzeFind, DEFAULT_TOP_K } from "./find/find.js";
@@ -26,6 +27,7 @@ import {
   renderSkillWeighPretty,
   renderTestReportPretty,
   setColor,
+  renderCheckDiffPretty,
 } from "./reporters/pretty.js";
 import { parseScenario, runScenario, type Runner } from "./testing/harness.js";
 import { acceptsSamplingParams, anthropicRunner } from "./testing/anthropicRunner.js";
@@ -370,6 +372,10 @@ program
   .option("--md", "print Markdown")
   .option("--no-timestamp", NO_TIMESTAMP_HELP)
   .option("--badge [file]", "write a grade badge SVG + shields endpoint JSON")
+  .option("--out <file>", "write the JSON result to a file (usable as a --diff baseline)")
+  .option("--diff <baseline>", "compare against a baseline JSON from --out")
+  .option("--allow-rules-drift", "let --diff proceed when the two runs used different rulesets (grade movement is then unattributable)")
+  .option("--fail-on-regression", "with --diff, exit 1 if any subject present in both runs scored lower")
   .option("--anthropic [model]", "use exact Claude token counts where relevant")
   .option("--window <tokens>", "context window the share is reported against", String(DEFAULT_CONTEXT_WINDOW))
   .option("--no-color", "disable colors")
@@ -382,6 +388,10 @@ program
     strictReadiness?: boolean;
     conformance?: boolean;
     badge?: string | boolean;
+    out?: string;
+    diff?: string;
+    allowRulesDrift?: boolean;
+    failOnRegression?: boolean;
     anthropic?: string | boolean;
   }) => {
     colorSetup(opts);
@@ -422,7 +432,42 @@ program
       report = res.report;
     }
 
+    // A baseline is written unstamped for the same reason weigh's is: a file
+    // that differs on every write is the one field a comparison must ignore,
+    // and a committed baseline that diffs on nothing but the clock trains
+    // reviewers to skim the file they should be reading. The whole envelope is
+    // written rather than just its data, because the version and rulesVersion
+    // in it are what make the later comparison trustworthy.
+    const baselineAndDiff = (payload: unknown) => {
+      if (opts.out) {
+        fs.writeFileSync(opts.out, toJsonEnvelope("check", payload, { timestamp: false }));
+        console.error(pc.dim(`baseline written: ${opts.out}`));
+      }
+      if (!opts.diff) return;
+      let baseline: CheckEnvelope;
+      try {
+        baseline = JSON.parse(fs.readFileSync(opts.diff, "utf8")) as CheckEnvelope;
+      } catch (e) {
+        fail(`could not read the baseline "${opts.diff}": ${(e as Error).message}`);
+        return;
+      }
+      const current = JSON.parse(toJsonEnvelope("check", payload, { timestamp: false })) as CheckEnvelope;
+      try {
+        const d = diffCheck(baseline, current, { allowRulesDrift: opts.allowRulesDrift });
+        console.log("");
+        console.log(renderCheckDiffPretty(d));
+        if (opts.failOnRegression && d.worsened.length) process.exitCode = 1;
+      } catch (e) {
+        // Every refusal here is a comparison that would have produced a
+        // plausible number from incomparable inputs, so it stops rather than
+        // printing one.
+        if (e instanceof CheckDiffRefused) fail(e.message);
+        throw e;
+      }
+    };
+
     if (skillSet) {
+      baselineAndDiff(skillSet);
       if (opts.json) console.log(toJsonEnvelope("check", skillSet, envelopeOpts(opts)));
       else if (opts.md) console.log(renderSkillSetMarkdown(skillSet));
       else console.log(renderSkillSetPretty(skillSet));
@@ -437,6 +482,7 @@ program
     }
     if (!report) return;
 
+    baselineAndDiff(report);
     if (opts.json) console.log(toJsonEnvelope("check", report, envelopeOpts(opts)));
     else if (opts.md) console.log(renderCheckMarkdown(report));
     else console.log(renderCheckPretty(report));
