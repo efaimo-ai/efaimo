@@ -36,7 +36,7 @@ import { toJsonEnvelope } from "./reporters/json.js";
 import { renderCheckMarkdown, renderDiffMarkdown, renderFindMarkdown, renderSkillSetMarkdown, renderWeighMarkdown } from "./reporters/markdown.js";
 import { gradeBadgeSpec, makeBadgeSvg, toShieldsEndpoint, weighBadgeSpec } from "./reporters/badge.js";
 import { loadDotEnv } from "./util/dotenv.js";
-import type { CheckReport, ServerWeighResult, WeighResult } from "./core/types.js";
+import type { CheckReport, ServerWeighResult, WeighResult, ToolDef} from "./core/types.js";
 
 // Load a local .env before any command reads a key. Shell env always wins.
 const dotEnvKeys = new Set(loadDotEnv());
@@ -541,7 +541,7 @@ program
 program
   .command("find")
   .description("would a search surface these tools? (findability under deferred tool loading)")
-  .argument("[target]", "stdio command | http(s) URL")
+  .argument("[targets...]", "one or more MCP servers: stdio command | http(s) URL. Two or more are merged into one catalog and measured together")
   .option("--stdio", "treat target as a stdio command string")
   .option("--header <header>", 'HTTP header "Key: Value" (repeatable)', collectPairs(":"))
   .option("--env <pair>", "KEY=VALUE for stdio servers (repeatable)", collectPairs("="))
@@ -563,11 +563,16 @@ program
       "the catalog: a tool that owns no word the others lack cannot be matched by any query that does not\n" +
       "also match a competitor. `probe` is a simulated BM25 search, offline and deterministic, and it\n" +
       "saturates on well-formed catalogs, so it is a floor test rather than a ranking.\n" +
+      "Pass more than one server and their catalogs are MERGED and measured together, with each tool\n" +
+      "labelled by where it came from. That is the case worth checking: a server author keeps their own\n" +
+      "names apart, nobody coordinates across the several servers a person installs, and the model sees\n" +
+      "one flat list. A single-server run is structurally unable to see a collision between two of them.\n" +
       "No API key, no network beyond connecting to the server. docs/METHODOLOGY.md has the method.",
   )
-  .action(async (targetArg: string | undefined, opts: CommonOpts & { top?: string; minDistinct?: string }) => {
+  .action(async (targetArgs: string[] | undefined, opts: CommonOpts & { top?: string; minDistinct?: string }) => {
     colorSetup(opts);
-    if (!targetArg) fail("nothing to search: pass an MCP server (stdio command or URL)");
+    const args = targetArgs ?? [];
+    if (!args.length) fail("nothing to search: pass an MCP server (stdio command or URL)");
     const timeoutMs = seconds(opts.timeout) * 1000;
     const topK = parseNumberOpt(opts.top, "--top", { min: 1 }) ?? DEFAULT_TOP_K;
     // A window is a count of results, so a fraction of one is not a stricter
@@ -578,23 +583,50 @@ program
     const minDistinct = parseNumberOpt(opts.minDistinct, "--min-distinct", { min: 0 });
     if (minDistinct !== undefined && minDistinct > 100) fail(`--min-distinct is a percentage, got "${opts.minDistinct}"`);
 
-    const target = resolveTarget(targetArg, { forceStdio: opts.stdio, env: opts.env, headers: opts.header });
-    if (target.kind === "skillset" || target.kind === "repo") {
-      fail(
-        `"${target.label}" is a ${target.kind === "skillset" ? "skill path" : "source directory"}; find needs a live MCP server (stdio command or URL). ` +
-          `Skills have no searchable tool catalog; their trigger-overlap check is S103 in \`efaimo check --skill\`.`,
+    const targets = args
+      .map((a) => resolveTarget(a, { forceStdio: opts.stdio, env: opts.env, headers: opts.header }))
+      .map((target) => {
+        if (target.kind === "skillset" || target.kind === "repo") {
+          fail(
+            `"${target.label}" is a ${target.kind === "skillset" ? "skill path" : "source directory"}; find needs a live MCP server (stdio command or URL). ` +
+              `Skills have no searchable tool catalog; their trigger-overlap check is S103 in \`efaimo check --skill\`.`,
+          );
+          throw new Error("unreachable");
+        }
+        return target;
+      });
+
+    // Several servers are merged into ONE catalog rather than measured one at
+    // a time, because the failure worth finding only exists between them. A
+    // server's author keeps their own tool names apart as a matter of course;
+    // nobody coordinates across the five or ten servers a person actually
+    // installs, and the model sees all of them as one flat list with no
+    // indication of which came from where. Measuring them separately would
+    // report every catalog as tidy and miss exactly the collision that makes a
+    // model pick the wrong tool.
+    //
+    // The origin is attached for the report and NOT for the index. Prefixing
+    // names with their server would hand every tool a term no other tool has,
+    // and a catalog of indistinguishable tools would score a perfect 100.
+    let tools: ToolDef[] = [];
+    let definitionTokens = 0;
+    for (const target of targets) {
+      console.error(pc.dim(`connecting to ${target.label} ...`));
+      const intro = await introspectServer(target, { timeoutMs });
+      // Weighed only to answer one question: is this catalog big enough that a
+      // host would defer it. No API key is involved; the count is the local
+      // o200k estimate the rest of the tool uses.
+      const w = await weighServer(intro);
+      definitionTokens += w.totals.claudeStyle;
+      tools = tools.concat(
+        targets.length > 1 ? intro.tools.map((tool) => ({ ...tool, origin: target.label })) : intro.tools,
       );
     }
-
-    console.error(pc.dim(`connecting to ${target.label} ...`));
-    const intro = await introspectServer(target, { timeoutMs });
-    // Weighed only to answer one question: is this catalog big enough that a
-    // host would defer it. No API key is involved; the count is the local
-    // o200k estimate the rest of the tool uses.
-    const weigh = await weighServer(intro);
-    const result = analyzeFind(target.label, intro.tools, {
+    const label = targets.length === 1 ? targets[0]!.label : `${targets.length} servers`;
+    const result = analyzeFind(label, tools, {
       topK,
-      definitionTokens: weigh.totals.claudeStyle,
+      definitionTokens,
+      sources: targets.map((x) => x.label),
     });
     const findings = runFindRules({ find: result });
 

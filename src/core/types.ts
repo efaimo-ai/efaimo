@@ -29,6 +29,17 @@ export interface ToolDef {
   inputSchema?: unknown;
   outputSchema?: unknown;
   annotations?: Record<string, unknown>;
+  /**
+   * Which server this tool came from, when several are analysed together.
+   *
+   * DISPLAY ONLY. It is deliberately absent from `indexedTerms`, and putting
+   * it there would be the same bug the query builder already documents: a
+   * per-server token has maximal idf, so prefixing names with their origin
+   * would hand every tool a word no other tool has and report a catalog of
+   * indistinguishable tools as perfectly distinct. The measurement has to see
+   * exactly what a model sees, which is a flat list with no origin attached.
+   */
+  origin?: string;
 }
 
 export interface ResourceDef {
@@ -193,6 +204,8 @@ export type WeighResult = ServerWeighResult | SkillSetWeighResult;
 /** One tool's result in the findability report (`efaimo find`). */
 export interface ToolFindEntry {
   name: string;
+  /** The server this tool came from, when more than one was analysed. */
+  origin?: string;
   /**
    * Terms this tool has that no other tool in the catalog has.
    *
@@ -250,6 +263,16 @@ export interface FindResult {
     topK: number;
   };
   perTool: ToolFindEntry[];
+  /**
+   * The servers whose catalogs were merged, when more than one.
+   *
+   * Present only for a stack. A single server's author avoids collisions
+   * inside their own catalog as a matter of course, so a one-server run is
+   * structurally unable to see the failure that actually bites: two servers
+   * installed side by side, each internally tidy, exposing tools a model
+   * cannot tell apart.
+   */
+  sources?: string[];
   /**
    * The headline: how many tools own at least one word no other tool has.
    * A measured proportion, deliberately not a letter grade (ADR-030).

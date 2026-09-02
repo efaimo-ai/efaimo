@@ -337,6 +337,11 @@ export function renderFindPretty(f: FindResult): string {
   });
   const shown = byWorst.slice(0, 15);
   const nameW = Math.min(34, Math.max(12, ...shown.map((t) => cell(t.name).length)));
+  if (f.sources && f.sources.length > 1) {
+    // The whole point of a stack run is which server a colliding tool came
+    // from, so it goes beside the name rather than into a footnote.
+    lines.push(paint(pc.dim, `  merged ${f.sources.length} catalogs: ${f.sources.join(", ")}`));
+  }
   lines.push(paint(pc.dim, `  words  ${"tool".padEnd(nameW)}  vocabulary no other tool has`));
   for (const t of shown) {
     const count =
@@ -364,7 +369,8 @@ export function renderFindPretty(f: FindResult): string {
         : t.reachable
           ? ""
           : paint(pc.red, `   [probe: rank ${t.rank}]`);
-    lines.push(`  ${count}  ${cell(t.name).padEnd(nameW)}  ${tail}${probe}`);
+    const from = t.origin ? paint(pc.dim, `  [${t.origin}]`) : "";
+    lines.push(`  ${count}  ${cell(t.name).padEnd(nameW)}  ${tail}${probe}${from}`);
   }
   // Describe the hidden rows from the hidden rows, never from an assumption.
   // This line used to read "(+N more, each owning at least one word)" without

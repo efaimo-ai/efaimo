@@ -440,3 +440,64 @@ describe("counts are counts of the problem, not of the display cap", () => {
     expect(msg).toContain(`${truePairs} in total`);
   });
 });
+
+describe("stack mode: several servers merged into one catalog", () => {
+  // The failure worth finding only exists between servers. A server's author
+  // keeps their own tool names apart as a matter of course; nobody coordinates
+  // across the five or ten servers a person installs, and the model sees one
+  // flat list with no indication of which came from where.
+  const alpha = [
+    tool("alpha_search", "Search the alpha corpus for documents matching a query."),
+    tool("alpha_delete", "Permanently remove an alpha document by its identifier."),
+  ];
+  const beta = [
+    tool("beta_search", "Search the beta corpus for documents matching a query."),
+    tool("beta_export", "Write beta rows out to a spreadsheet file on disk."),
+  ];
+  const tag = (ts: ToolDef[], origin: string) => ts.map((t) => ({ ...t, origin }));
+
+  it("each server alone looks fine; merged, the two search tools collide", () => {
+    expect(analyzeFind("alpha", alpha).distinct.pct).toBe(100);
+    expect(analyzeFind("beta", beta).distinct.pct).toBe(100);
+
+    const merged = analyzeFind("2 servers", [...tag(alpha, "alpha"), ...tag(beta, "beta")], {
+      sources: ["alpha", "beta"],
+    });
+    expect(merged.distinct.pct).toBeLessThan(100);
+    const collided = merged.perTool.filter((e) => e.ownTermCount === 0).map((e) => e.name);
+    expect(collided.length).toBeGreaterThan(0);
+  });
+
+  it("carries the origin so a collision can be attributed to a server", () => {
+    const merged = analyzeFind("2 servers", [...tag(alpha, "alpha"), ...tag(beta, "beta")], {
+      sources: ["alpha", "beta"],
+    });
+    expect(merged.sources).toEqual(["alpha", "beta"]);
+    expect(merged.perTool.map((e) => e.origin)).toEqual(["alpha", "alpha", "beta", "beta"]);
+  });
+
+  it("origin never enters the index, or every tool would own a unique word", () => {
+    // Prefixing names with their server is the tempting shortcut and it would
+    // destroy the measurement: a per-server token has maximal idf, so a
+    // catalog of indistinguishable tools would report a perfect 100.
+    const same = [
+      tool("search", "Search the corpus for documents matching a query."),
+      tool("search", "Search the corpus for documents matching a query."),
+    ];
+    // The origin labels are real-looking on purpose. An earlier version of this
+    // test used "server-one" and "server-two", whose only surviving tokens are
+    // both "server" once stopwords go, so folding origin into the index would
+    // have changed nothing and the test passed a sabotage it was written to
+    // catch. Distinctive labels are what real origins look like anyway.
+    const merged = analyzeFind("2 servers", [
+      { ...same[0]!, origin: "npx -y @acme/quokka-mcp" },
+      { ...same[1]!, origin: "npx -y @globex/wombat-mcp" },
+    ], { sources: ["npx -y @acme/quokka-mcp", "npx -y @globex/wombat-mcp"] });
+    expect(merged.distinct.count).toBe(0);
+    expect(merged.distinct.pct).toBe(0);
+  });
+
+  it("a single server carries no sources field, so a one-server report cannot read as a stack", () => {
+    expect(analyzeFind("alpha", alpha, { sources: ["alpha"] }).sources).toBeUndefined();
+  });
+});

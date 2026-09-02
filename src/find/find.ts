@@ -231,6 +231,8 @@ export function taskQuery(tool: ToolDef, index: Bm25Index, limit = DEFAULT_QUERY
 }
 
 export interface FindOptions {
+  /** Labels of the servers merged into this catalog, when more than one. */
+  sources?: string[];
   topK?: number;
   queryTerms?: number;
   /** Claude-style tool-definition tokens, used only to say whether deferral is likely. */
@@ -330,6 +332,7 @@ export function analyzeFind(label: string, tools: readonly ToolDef[], opts: Find
         : [];
     return {
       name: tool.name,
+      ...(tool.origin ? { origin: tool.origin } : {}),
       ownTerms: own.slice(0, 4),
       ownTermCount: own.length,
       ownOutsideNameCount: ownOutsideName.length,
@@ -413,6 +416,7 @@ export function analyzeFind(label: string, tools: readonly ToolDef[], opts: Find
   return {
     kind: "find",
     label,
+    ...(opts.sources && opts.sources.length > 1 ? { sources: opts.sources } : {}),
     toolCount: tools.length,
     method: { tokenizer: "efaimo-v1", bm25: { ...DEFAULT_BM25 }, queryTerms, topK },
     perTool,

@@ -42,6 +42,31 @@ tag, never in the tag commit, because registries render the tagged tree.
   +61.4% with one skill at 96.5% of that movement; grades 0 improved and 4
   worsened.
 
+- **`efaimo find` takes several servers** _(unreleased)_. Pass more than one
+  and their catalogs are merged into one and measured together, each tool
+  labelled with where it came from. A flag-shaped change rather than a new
+  subcommand, because the engine already took a flat tool array and only the
+  CLI surface was single-target.
+
+  The reason it is worth having: a server's author keeps their own tool names
+  apart as a matter of course, nobody coordinates across the several servers a
+  person actually installs, and the model sees one flat list with no
+  indication of origin. A single-server run is structurally unable to see the
+  collision that actually bites.
+
+  The origin is carried for the report and deliberately kept out of the index.
+  Prefixing names with their server would hand every tool a term no other tool
+  has, and a catalog of indistinguishable tools would score a perfect 100.
+  There is a test for exactly that, and it had to be rewritten once: its first
+  origin labels were "server-one" and "server-two", whose only surviving token
+  is "server" for both, so the sabotage it existed to catch passed.
+
+  Measured live on `server-everything@2026.7.4` plus `@playwright/mcp@0.0.78`:
+  37 tools merged, 35 distinct (94.6%). No cross-server collision between
+  those two, which is the right answer for a filesystem server and a browser
+  server, and the two tools owning nothing are playwright's own already
+  documented `browser_close` and `browser_navigate`.
+
 ### Fixed
 
 - **S102 no longer passes filler** _(unreleased)_. The rule read
