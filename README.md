@@ -406,3 +406,7 @@ Built by [efaimo ai](https://efaimo.ai), open tooling for the space between host
 and tools. `efaimo` is the flagship CLI; capabilities grow as subcommands under one
 name. Apache-2.0. See [CONTRIBUTING.md](./CONTRIBUTING.md) and
 [docs/RULES.md](./docs/RULES.md) to add a rule.
+
+EFAIMO AI is a registered trademark of the publisher (KR 40-2585820, class 42).
+The lowercase `efaimo ai` used throughout is the same mark; the package name and
+the commands stay lowercase.
