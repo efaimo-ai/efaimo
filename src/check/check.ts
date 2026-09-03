@@ -127,5 +127,21 @@ export async function checkSkillSet(pathInput: string, label: string): Promise<C
 
   const setFindings = set.skills.flatMap((skill) => runRules(setRules, { skill, set, weigh }));
 
+  // S107 is emitted here rather than by a SkillRule because its subject is a
+  // file that is NOT a skill: no rule that takes a parsed skill could ever see
+  // it. Set level and warn level on purpose, so it moves no grade, matching
+  // how S103 treats a collision that belongs to a pair rather than to either
+  // member.
+  for (const file of set.miscasedSkillFiles ?? []) {
+    setFindings.push({
+      ruleId: "S107",
+      severity: "warn",
+      title: "filename is one capitalisation away from a skill",
+      message: `"${path.relative(set.root, file)}" is not loaded here, because the spec names SKILL.md exactly. A case-insensitive filesystem (the macOS and Windows default) may still hand it to a host, so this can work on a laptop and be missing entirely in Linux CI.`,
+      target: path.relative(set.root, file),
+      fixHint: "rename it to SKILL.md, or delete it if it is not a skill",
+    });
+  }
+
   return { label, root: set.root, perSkill, setFindings, weigh };
 }

@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
-import { findSkills, parseSkillFile } from "../src/skills/parse.js";
+import { findSkills, parseSkillFile, SKILL_WALK_MAX_DEPTH } from "../src/skills/parse.js";
 import { checkSkillSet } from "../src/check/check.js";
 import { weighSkills } from "../src/weigh/weigh.js";
 
@@ -161,5 +161,134 @@ A body long enough to be ordinary.
         "Use before trusting any check that came back clean, such as a grep with no matches or a green CI gate, whenever you are about to report no issues found.",
       ),
     ).toEqual([]);
+  });
+});
+
+describe("skill discovery after 2026-09-03", () => {
+  // Two layouts this walk could not see. The first is where a project keeps
+  // its own skills, so being blind to it made `check --skill` useless for the
+  // most common real case; the second is one directory deeper than the old
+  // bound of 3. Together they were the difference between 34 skills and 38 on
+  // the public corpus, with scripts/skills-index.mjs reporting the larger
+  // number and this reporting the smaller, each with confidence.
+  function tree(layout: Record<string, string>) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-walk-"));
+    for (const [rel, name] of Object.entries(layout)) {
+      const dir = path.join(root, ...rel.split("/"));
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "SKILL.md"),
+        `---\nname: ${name}\ndescription: Use when probing the walker, for a test that names concrete things.\n---\n\n# ${name}\n\nBody.\n`,
+      );
+    }
+    return root;
+  }
+
+  it("finds a skill inside a dot directory", () => {
+    const root = tree({ ".claude/skills/probe": "probe" });
+    try {
+      expect(findSkills(root).skills.map((s) => s.name)).toEqual(["probe"]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("finds a skill one level deeper than the old bound of three", () => {
+    const root = tree({ "repo/skills/custom_skills/deep": "deep" });
+    try {
+      expect(findSkills(root).skills.map((s) => s.name)).toEqual(["deep"]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still refuses .git, so entering dot directories did not open everything", () => {
+    const root = tree({ ".git/skills/nope": "nope", "skills/yes": "yes" });
+    try {
+      expect(findSkills(root).skills.map((s) => s.name)).toEqual(["yes"]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("says what it did not look at when the depth bound bites", () => {
+    // Deeper than SKILL_WALK_MAX_DEPTH. A bound that truncates in silence is
+    // the same failure as a check that examines nothing.
+    const deep = Array.from({ length: SKILL_WALK_MAX_DEPTH + 2 }, (_, i) => `d${i}`).join("/");
+    const root = tree({ [deep]: "buried" });
+    try {
+      const set = findSkills(root);
+      expect(set.skills).toHaveLength(0);
+      expect(set.truncatedAt?.length ?? 0).toBeGreaterThan(0);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports nothing about truncation when the bound never bites", () => {
+    const root = tree({ "skills/shallow": "shallow" });
+    try {
+      expect(findSkills(root).truncatedAt).toBeUndefined();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("S107: a filename one capitalisation away from a skill", () => {
+  // Found while tracing a wrong analysis rather than a bug report. A Windows
+  // glob for SKILL.md matched five files actually named skill.md, because the
+  // filesystem is case-insensitive; the tools were right to ignore them and
+  // the analysis was wrong. The real defect was underneath: nothing anywhere
+  // mentioned those files, so a repository could carry a skill that loads on
+  // macOS and Windows and does not exist in Linux CI, in silence.
+  function tree(files: Record<string, string>) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-case-"));
+    for (const [rel, filename] of Object.entries(files)) {
+      const dir = path.join(root, ...rel.split("/"));
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, filename),
+        "---\nname: probe\ndescription: Use when probing filename casing, naming concrete things a reader would type.\n---\n\n# probe\n\nBody.\n",
+      );
+    }
+    return root;
+  }
+
+  it("reports a lowercase skill.md that no rule could otherwise see", async () => {
+    const root = tree({ "skills/real": "SKILL.md", "skills/nearly": "skill.md" });
+    try {
+      const res = await checkSkillSet(root, "probe");
+      expect(res.perSkill).toHaveLength(1);
+      const s107 = res.setFindings.filter((f) => f.ruleId === "S107");
+      expect(s107).toHaveLength(1);
+      expect(s107[0]!.severity).toBe("warn");
+      expect(s107[0]!.message).toMatch(/Linux CI/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not move any grade, because the subject is not a skill", async () => {
+    const clean = tree({ "skills/real": "SKILL.md" });
+    const withNearMiss = tree({ "skills/real": "SKILL.md", "skills/nearly": "skill.md" });
+    try {
+      const a = await checkSkillSet(clean, "a");
+      const b = await checkSkillSet(withNearMiss, "b");
+      expect(b.perSkill[0]!.report.grade).toEqual(a.perSkill[0]!.report.grade);
+    } finally {
+      fs.rmSync(clean, { recursive: true, force: true });
+      fs.rmSync(withNearMiss, { recursive: true, force: true });
+    }
+  });
+
+  it("says nothing when every filename is exact", async () => {
+    const root = tree({ "skills/real": "SKILL.md" });
+    try {
+      const res = await checkSkillSet(root, "probe");
+      expect(res.setFindings.filter((f) => f.ruleId === "S107")).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

@@ -130,6 +130,13 @@ export function parseSkillFile(file: string): SkillInfo {
 }
 
 /** Resolve a path (SKILL.md file, skill dir, or a directory of skills) into a SkillSet. */
+/**
+ * How deep skill discovery walks. See the note inside `findSkills`: measured
+ * against the public corpus, where the deepest real skill is four directories
+ * below a directory of repositories.
+ */
+export const SKILL_WALK_MAX_DEPTH = 6;
+
 export function findSkills(input: string): SkillSet {
   const abs = path.resolve(input);
   const stat = fs.statSync(abs);
@@ -140,10 +147,47 @@ export function findSkills(input: string): SkillSet {
   if (fs.existsSync(direct)) {
     return { root: abs, skills: [parseSkillFile(direct)] };
   }
+  // Discovery is deliberate rather than incidental, because two walkers with
+  // different rules is what produced the 2026-09-03 defect: this found 34
+  // skills in a corpus where `scripts/skills-index.mjs` found 38, and both
+  // reported their own number with confidence.
+  //
+  // maxDepth 6 is measured, not picked. In the public corpus the deepest real
+  // skill sits 4 directories below a directory-of-repositories
+  // (`<corpus>/<repo>/skills/custom_skills/<name>/SKILL.md`) and 3 below a
+  // repository root. Six leaves two levels of headroom and keeps an accidental
+  // `check --skill /` from walking a disk. When the bound does bite it is
+  // reported rather than swallowed, in `truncatedAt`.
+  //
+  // Dot directories are entered here and nowhere else in this codebase:
+  // `.claude/skills/<name>/` is where a project keeps its own skills, so
+  // skipping them made this blind to the most common real layout. `.git` is
+  // still excluded by DEFAULT_SKIP_DIRS.
   const skills: SkillInfo[] = [];
-  for (const f of walkFiles(abs, { maxDepth: 3 })) {
-    if (path.basename(f) === "SKILL.md") skills.push(parseSkillFile(f));
+  const truncatedAt: string[] = [];
+  const miscased: string[] = [];
+  for (const f of walkFiles(abs, {
+    maxDepth: SKILL_WALK_MAX_DEPTH,
+    includeDotDirs: true,
+    onDepthLimit: (d) => truncatedAt.push(d),
+  })) {
+    const base = path.basename(f);
+    if (base === "SKILL.md") skills.push(parseSkillFile(f));
+    // A file that is only a capitalisation away from being a skill. The spec
+    // names SKILL.md exactly, and this comparison is exact, so `skill.md` is
+    // invisible here on every platform. It is not invisible everywhere: a
+    // case-insensitive filesystem, which is the default on macOS and Windows,
+    // may hand it to a host that opens it by name, so the same repository has
+    // a working skill on the author's laptop and no skill at all in Linux CI.
+    // Nothing else in this tool would ever mention it, which is the worst
+    // property a near miss can have.
+    else if (base.toLowerCase() === "skill.md") miscased.push(f);
   }
   skills.sort((a, b) => a.file.localeCompare(b.file));
-  return { root: abs, skills };
+  return {
+    root: abs,
+    skills,
+    ...(truncatedAt.length ? { truncatedAt } : {}),
+    ...(miscased.length ? { miscasedSkillFiles: miscased.sort() } : {}),
+  };
 }

@@ -65,7 +65,7 @@ never reused, so a gap is permanent and is better stated than smoothed over.
 | E128 | warn | total tool-definition tax over ~10k / ~25k tokens, estimated (needs `weigh` data); hard CI failure is left to the `--max-tokens`/`--diff` gate |
 | E130 | info | instruction-injection patterns in a tool description or server instructions (shallow heuristic, never a security verdict; use a dedicated scanner for depth). **Reported but never scored** |
 
-## Skills (S101-S106)
+## Skills (S101-S107)
 
 | id | sev | what it catches | spec |
 |---|---|---|---|
@@ -75,6 +75,7 @@ never reused, so a gap is permanent and is better stated than smoothed over.
 | S104 | warn/info | metadata over ~100 tokens, body over ~5k tokens or 500 lines, or long body with no progressive disclosure | agentskills.io |
 | S105 | info | instruction-injection patterns in the skill body or description (shallow heuristic, never a security verdict). **Reported but never scored** | internal |
 | S106 | error/warn/info | referenced file missing, escaping the skill dir (`..`), or nested more than one level deep | agentskills.io |
+| S107 | warn | a file one capitalisation away from a skill, such as `skill.md`. Set-level and never scored: the spec names `SKILL.md` exactly, so it is not a skill here on any platform, but a case-insensitive filesystem (the macOS and Windows default) may hand it to a host, which makes a repository work on a laptop and have no skill at all in Linux CI | internal |
 
 ## Findability (E141-E145)
 

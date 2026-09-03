@@ -4,6 +4,55 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] 0.4.0
+
+Everything in this section is **(unreleased)**: it exists on `main` and not in
+what `npx efaimo` installs. These annotations come off in the commit BEFORE the
+tag, never in the tag commit, because registries render the tagged tree.
+
+### Fixed
+
+- **`check --skill <dir>` finds skills it used to walk past** _(unreleased)_.
+  Two causes, both silent. The walk never entered a directory whose name starts
+  with a dot, so `.claude/skills/<name>/`, which is where a project keeps its
+  own skills, was invisible; and its depth bound of 3 missed layouts one level
+  deeper such as `skills/custom_skills/<name>/`. On the public corpus this
+  found 34 skills where `scripts/skills-index.mjs` found 38, and both numbers
+  were reported with confidence.
+
+  Dot directories are now entered for skill discovery and nowhere else, with
+  `.git` still excluded. The depth bound is 6 and is measured rather than
+  picked: the deepest real skill in that corpus sits 4 directories below a
+  directory of repositories and 3 below a repository root, so six leaves two
+  levels of headroom while still keeping an accidental `check --skill /` from
+  walking a disk.
+
+  **And when the bound does bite, it says so.** `SkillSet.truncatedAt` lists
+  the directories the walk refused to enter, because a bound that truncates in
+  silence is the same failure as a check that examines nothing. On the public
+  corpus it fires 16 times, all of them XML schema trees inside the `xlsx` and
+  `pptx` skills, which is the bound doing its job audibly.
+
+- **One walker instead of two** _(unreleased)_. `scripts/skills-index.mjs`
+  carried its own copy with different rules, which is why the two disagreed.
+  It now calls the CLI's discovery, so they cannot drift apart again, and it
+  passes the truncation warning through. The published July index regenerates
+  byte-identically under the shared walk, which is how this was checked.
+
+### Added
+
+- **S107: a filename one capitalisation away from a skill** _(unreleased)_.
+  Set-level and warn-level, so it moves no grade, in the same way S103 treats
+  a collision that belongs to a pair rather than to either member.
+
+  The spec names `SKILL.md` exactly and discovery matches it exactly, so
+  `skill.md` is not a skill here on any platform. It is not nothing anywhere:
+  a case-insensitive filesystem, the default on macOS and Windows, may hand it
+  to a host that opens it by name, so the same repository can carry a working
+  skill on the author's laptop and no skill at all in Linux CI. Nothing in
+  this tool would previously have mentioned such a file, which is the worst
+  property a near miss can have. Five exist in the public corpus.
+
 ## [0.3.0] - 2026-09-03
 
 ### Added

@@ -327,6 +327,24 @@ export interface SkillInfo {
 export interface SkillSet {
   root: string;
   skills: SkillInfo[];
+  /**
+   * Directories the walk refused to enter because it hit its depth bound.
+   *
+   * Present only when the bound actually bit. A truncated search that reports
+   * a short list and no reason is the same failure as a check that examines
+   * nothing, so the caller is given the means to say what it did not look at.
+   */
+  truncatedAt?: string[];
+  /**
+   * Files one capitalisation away from being a skill, such as `skill.md`.
+   *
+   * The spec names `SKILL.md` exactly and discovery matches it exactly, so
+   * these are not skills here on any platform. They may still be skills to a
+   * host reading a case-insensitive filesystem, which is the default on macOS
+   * and Windows, so the same repository can work on a laptop and have no
+   * skills at all in Linux CI. Reported by S107.
+   */
+  miscasedSkillFiles?: string[];
 }
 
 export interface GradeInfo {

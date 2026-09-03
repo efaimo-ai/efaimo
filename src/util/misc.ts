@@ -40,10 +40,29 @@ const DEFAULT_SKIP_DIRS = new Set([
   ".pnpm",
 ]);
 
-export function* walkFiles(
-  root: string,
-  opts: { maxDepth?: number; skipDirs?: Set<string> } = {},
-): Generator<string> {
+export interface WalkOptions {
+  maxDepth?: number;
+  skipDirs?: Set<string>;
+  /**
+   * Descend into directories whose name starts with a dot.
+   *
+   * Off by default, because most of them are caches and metadata. On for skill
+   * discovery, because `.claude/skills/<name>/` is where a project keeps its
+   * own skills and a tool that cannot see the most common real layout is not
+   * auditing anything. `DEFAULT_SKIP_DIRS` still excludes `.git`.
+   */
+  includeDotDirs?: boolean;
+  /**
+   * Called once for each directory not entered because `maxDepth` was reached.
+   *
+   * A bound that truncates in silence is the same failure as a check that
+   * examines nothing: the caller sees a short list and no reason for it. This
+   * lets the caller say so.
+   */
+  onDepthLimit?: (dir: string) => void;
+}
+
+export function* walkFiles(root: string, opts: WalkOptions = {}): Generator<string> {
   const maxDepth = opts.maxDepth ?? 8;
   const skip = opts.skipDirs ?? DEFAULT_SKIP_DIRS;
   const stack: { dir: string; depth: number }[] = [{ dir: root, depth: 0 }];
@@ -58,9 +77,13 @@ export function* walkFiles(
     for (const e of entries) {
       const full = path.join(dir, e.name);
       if (e.isDirectory()) {
-        if (depth < maxDepth && !skip.has(e.name) && !e.name.startsWith(".")) {
-          stack.push({ dir: full, depth: depth + 1 });
+        if (skip.has(e.name)) continue;
+        if (!opts.includeDotDirs && e.name.startsWith(".")) continue;
+        if (depth >= maxDepth) {
+          opts.onDepthLimit?.(full);
+          continue;
         }
+        stack.push({ dir: full, depth: depth + 1 });
       } else if (e.isFile()) {
         yield full;
       }

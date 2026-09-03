@@ -19,7 +19,7 @@
 // that includes the author.
 import fs from "node:fs";
 import path from "node:path";
-import { checkSkillSet } from "../dist/index.js";
+import { checkSkillSet, findSkills } from "../dist/index.js";
 import { VERSION } from "../dist/version.js";
 
 const argv = process.argv.slice(2);
@@ -59,24 +59,28 @@ try {
   manifest = undefined;
 }
 
+// Discovery comes from the CLI, not from a copy here.
+//
+// This file used to carry its own walker: unbounded depth, dot directories
+// entered, skipping only node_modules and .git. The CLI's stopped at depth 3
+// and never entered a dot directory. On 2026-09-03 that produced 38 here and
+// 34 there on the same corpus, each reported with confidence, and the gap sat
+// unnoticed until a diff of the two was published side by side. Two walkers
+// that agree do so by luck; one walker cannot disagree with itself.
+//
+// If the shared walk ever truncates, say so rather than quietly measuring a
+// subset: that is the same failure as writing a report of zero skills, which
+// the guard below already exists for.
 function skillDirs(root) {
-  const found = new Set();
-  const stack = [root];
-  const skip = new Set(["node_modules", ".git"]);
-  while (stack.length) {
-    const dir = stack.pop();
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const e of entries) {
-      if (e.isDirectory() && !skip.has(e.name)) stack.push(path.join(dir, e.name));
-      else if (e.isFile() && e.name === "SKILL.md") found.add(dir);
-    }
+  const set = findSkills(root);
+  if (set.truncatedAt?.length) {
+    console.error(
+      `warning: the walk stopped at its depth bound in ${set.truncatedAt.length} place(s); ` +
+        `skills below those are not in this index:\n  ` +
+        set.truncatedAt.slice(0, 5).map((d) => path.relative(root, d)).join("\n  "),
+    );
   }
-  return [...found];
+  return [...new Set(set.skills.map((s) => path.dirname(s.file)))];
 }
 
 async function gradeDir(dir, source) {
