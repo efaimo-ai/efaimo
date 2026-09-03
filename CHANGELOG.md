@@ -4,15 +4,11 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] 0.4.0
-
-Everything in this section is **(unreleased)**: it exists on `main` and not in
-what `npx efaimo` installs. These annotations come off in the commit BEFORE the
-tag, never in the tag commit, because registries render the tagged tree.
+## [0.4.0] - 2026-09-03
 
 ### Fixed
 
-- **`check --skill <dir>` finds skills it used to walk past** _(unreleased)_.
+- **`check --skill <dir>` finds skills it used to walk past**.
   Two causes, both silent. The walk never entered a directory whose name starts
   with a dot, so `.claude/skills/<name>/`, which is where a project keeps its
   own skills, was invisible; and its depth bound of 3 missed layouts one level
@@ -33,7 +29,7 @@ tag, never in the tag commit, because registries render the tagged tree.
   corpus it fires 16 times, all of them XML schema trees inside the `xlsx` and
   `pptx` skills, which is the bound doing its job audibly.
 
-- **One walker instead of two** _(unreleased)_. `scripts/skills-index.mjs`
+- **One walker instead of two**. `scripts/skills-index.mjs`
   carried its own copy with different rules, which is why the two disagreed.
   It now calls the CLI's discovery, so they cannot drift apart again, and it
   passes the truncation warning through. The published July index regenerates
@@ -41,7 +37,7 @@ tag, never in the tag commit, because registries render the tagged tree.
 
 ### Added
 
-- **S107: a filename one capitalisation away from a skill** _(unreleased)_.
+- **S107: a filename one capitalisation away from a skill**.
   Set-level and warn-level, so it moves no grade, in the same way S103 treats
   a collision that belongs to a pair rather than to either member.
 
@@ -412,6 +408,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[0.4.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.4.0
 [0.3.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.3.0
 [0.2.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.2.0
 [0.1.2]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.1.2
