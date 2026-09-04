@@ -107,7 +107,7 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 
 | skill | grade | metadata | body | referenced |
 |---|---|---|---|---|
-| `efaimo` | A (100) | 75 | 945 | 0 files, 0 |
+| `efaimo` | A (100) | 75 | 942 | 0 files, 0 |
 | `mcp-stateless-migration` | A (100) | 104 | 1,428 | 3 files, 3,690 |
 | `claim-sweep` | A (100) | 123 | 1,524 | 2 files, 2,647 |
 | `red-before-green` | A (100) | 115 | 984 | 2 files, 2,146 |
