@@ -107,13 +107,13 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 
 | skill | grade | metadata | body | referenced |
 |---|---|---|---|---|
-| `efaimo` | A (100) | 75 | 942 | 0 files, 0 |
-| `mcp-stateless-migration` | A (100) | 104 | 1,428 | 3 files, 3,690 |
-| `claim-sweep` | A (100) | 123 | 1,524 | 2 files, 2,647 |
-| `red-before-green` | A (100) | 115 | 984 | 2 files, 2,146 |
-| `honest-chart` | A (100) | 103 | 929 | 3 files, 2,391 |
-| `read-back` | A (100) | 108 | 1,138 | 0 files, 0 |
-| `unreleased-guard` | A (100) | 96 | 1,125 | 0 files, 0 |
-| `denominator` | A (100) | 65 | 839 | 2 files, 1,906 |
+| `efaimo` | A (100) | 75 | 1,039 | 0 files, 0 |
+| `mcp-stateless-migration` | A (100) | 104 | 1,517 | 3 files, 3,690 |
+| `claim-sweep` | A (100) | 92 | 1,657 | 2 files, 2,647 |
+| `red-before-green` | A (100) | 97 | 967 | 2 files, 2,601 |
+| `honest-chart` | A (100) | 91 | 923 | 3 files, 2,391 |
+| `read-back` | A (100) | 81 | 1,172 | 1 files, 1,717 |
+| `unreleased-guard` | A (100) | 96 | 1,143 | 1 files, 997 |
+| `denominator` | A (100) | 65 | 936 | 2 files, 1,906 |
 
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>
