@@ -34,8 +34,8 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 |---|---|
 | S104 | 6 (17%) |
 | S106 | 5 (14%) |
-| S101 | 2 (6%) |
 | S105 | 2 (6%) |
+| S101 | 2 (6%) |
 | S102 | 1 (3%) |
 
 ## Lowest-graded skills
@@ -45,14 +45,14 @@ Every `SKILL.md` in these repositories at these exact commits. Reproduce: `node 
 | `claude-api` | anthropics-skills | C (73) | 1 | 2 | 4 |
 | `writing-skills` | obra-superpowers | A (90) | 0 | 2 | 0 |
 | `pptx` | anthropics-skills | A (94) | 0 | 1 | 1 |
-| `subagent-driven-development` | obra-superpowers | A (95) | 0 | 1 | 0 |
-| `template-skill` | anthropics-skills | A (95) | 0 | 1 | 0 |
 | `skill-creator` | anthropics-skills | A (95) | 0 | 1 | 0 |
+| `template-skill` | anthropics-skills | A (95) | 0 | 1 | 0 |
+| `subagent-driven-development` | obra-superpowers | A (95) | 0 | 1 | 0 |
 | `mcp-builder` | anthropics-skills | A (96) | 0 | 0 | 4 |
-| `xlsx` | anthropics-skills | A (99) | 0 | 0 | 1 |
-| `doc-coauthoring` | anthropics-skills | A (99) | 0 | 0 | 1 |
-| `applying-brand-guidelines` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
 | `cookbook-audit` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
+| `applying-brand-guidelines` | anthropics-claude-cookbooks | A (99) | 0 | 0 | 1 |
+| `doc-coauthoring` | anthropics-skills | A (99) | 0 | 0 | 1 |
+| `xlsx` | anthropics-skills | A (99) | 0 | 0 | 1 |
 
 The other 25 skills in the corpus all graded A (100) with zero findings.
 
@@ -107,10 +107,13 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 
 | skill | grade | metadata | body | referenced |
 |---|---|---|---|---|
-| `efaimo` | A (100) | 75 | 942 | 0 files, 0 |
+| `efaimo` | A (100) | 75 | 945 | 0 files, 0 |
 | `mcp-stateless-migration` | A (100) | 104 | 1,428 | 3 files, 3,690 |
-| `claim-sweep` | A (100) | 110 | 1,115 | 2 files, 2,647 |
+| `claim-sweep` | A (100) | 123 | 1,524 | 2 files, 2,647 |
 | `red-before-green` | A (100) | 115 | 984 | 2 files, 2,146 |
 | `honest-chart` | A (100) | 103 | 929 | 3 files, 2,391 |
+| `read-back` | A (100) | 108 | 1,138 | 0 files, 0 |
+| `unreleased-guard` | A (100) | 96 | 1,125 | 0 files, 0 |
+| `denominator` | A (100) | 65 | 839 | 2 files, 1,906 |
 
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>
