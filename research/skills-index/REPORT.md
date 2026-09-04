@@ -114,6 +114,6 @@ Graded by the same call on the same rules, and deliberately kept out of every nu
 | `honest-chart` | A (100) | 91 | 923 | 3 files, 2,391 |
 | `read-back` | A (100) | 81 | 1,172 | 1 files, 1,717 |
 | `unreleased-guard` | A (100) | 96 | 1,143 | 1 files, 997 |
-| `denominator` | A (100) | 65 | 936 | 2 files, 1,906 |
+| `denominator` | A (100) | 65 | 1,011 | 2 files, 1,906 |
 
 <sub>Reproduce a row: `npx efaimo check --skill <skill-dir>`. Corpus and method are open; this is a lint-quality signal, not a security audit.</sub>
