@@ -1,2 +1,15 @@
+# INERT since 0.5.0, and kept on purpose.
+#
+# fast-uri arrived through ajv through @modelcontextprotocol/sdk 1.x. The 2.x
+# line does not pull ajv, so fast-uri is no longer in the production tree at all
+# and this override currently constrains nothing (`pnpm why fast-uri --prod`
+# finds it absent).
+#
+# It stays because the floor is the part that was hard to get right. On
+# 2026-09-03 this read "^3.1.4", below the advisory's patched floor, so the
+# lockfile installed 3.1.6 while the constraint still permitted a later
+# resolution back to the vulnerable 3.1.5. If the package ever returns through
+# another path, the correct floor should already be here rather than being
+# rediscovered from an advisory.
 overrides:
   fast-uri: "^3.1.6"

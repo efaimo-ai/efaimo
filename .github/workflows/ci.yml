@@ -35,19 +35,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Nothing in this repo would have said a word about a published advisory.
-      # Two were live on 2026-08-02, both in the half of the MCP SDK's tree
-      # this CLI never executes (its HTTP server stack: express, hono, cors),
-      # and there was no mechanism that could have surfaced them. --audit-level
-      # high, not moderate, on purpose: a moderate confined to code this CLI
-      # never runs is a lockfile-refresh chore (the 2026-08-02 one was cleared
-      # exactly that way on 2026-08-03), not a reason to stop a build. A high
-      # is a stop.
+      # Two were live on 2026-08-02, both in the half of the MCP SDK's tree this
+      # CLI never executes (its HTTP server stack: express, hono, cors), and
+      # there was no mechanism that could have surfaced them.
+      #
+      # The threshold was `high` from then until 0.5.0, and the reason was that
+      # tree: a moderate confined to code this CLI never runs is a
+      # lockfile-refresh chore, not a reason to stop a build. 0.5.0 moved to the
+      # 2.x SDK line and that whole stack left with it. Production dependencies
+      # went from 30 to 13, the two moderate `qs` advisories went with express,
+      # and `pnpm audit --prod` reports nothing at any level.
+      #
+      # So the threshold drops to `moderate`. It was set to tolerate something
+      # that no longer exists, and a threshold nobody re-derives after its
+      # reason expires is how a gate quietly stops being one. If this starts
+      # failing on a moderate in code we do not execute, argue it back up in
+      # this comment rather than in a flag.
       #
       # Runs once, not per matrix cell: the tree is the same on every OS and
       # Node version, and four identical failures is noise.
       - name: audit production dependencies
         if: matrix.os == 'ubuntu-latest' && matrix.node == 22
-        run: pnpm audit --prod --audit-level=high
+        run: pnpm audit --prod --audit-level=moderate
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test

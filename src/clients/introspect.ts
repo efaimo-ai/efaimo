@@ -1,8 +1,8 @@
 import crossSpawn from "cross-spawn";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { SSEClientTransport } from "@modelcontextprotocol/client";
 import type { ServerIntrospection, ToolDef, ResourceDef, PromptDef } from "../core/types.js";
 import type { ResolvedTarget } from "../targets/resolve.js";
 import { introspectStateless } from "./stateless.js";

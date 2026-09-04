@@ -4,6 +4,53 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-09-04
+
+### Changed
+
+- **`efaimo mcp` is built on the 2.x SDK line and now satisfies the
+  specification this tool audits other servers against.** The 1.x line speaks
+  2025-11-25; it cannot answer `server/discover` and cannot carry the SEP-2549
+  cache fields, so the one MCP server this project ships failed two MUST-level
+  items of the 2026-07-28 revision, and `check --mcp` said so about it on every
+  run. The skill this project publishes about that migration opens with "upgrade
+  the SDK first". This is that.
+
+  Measured against the built server, before and after, with the same command:
+
+  ```
+  before   2026-07-28 readiness  3 items to migrate   E106, E118, E107
+  after    2026-07-28 readiness  clean, nothing to migrate
+  ```
+
+  Read off the wire rather than from our own tool as well: a modern opening now
+  answers `server/discover` with `supportedVersions`, `capabilities`,
+  `resultType: "complete"`, `ttlMs` and `cacheScope`, and `tools/list` carries
+  the same three fields. A 2025-era client that opens with `initialize` is still
+  served, unchanged, because `serveStdio` pins the era per connection rather
+  than making the server pick one.
+
+- **The client half moved with it**, from `@modelcontextprotocol/sdk` to
+  `@modelcontextprotocol/client`. Doing only the server half would have left
+  both generations installed, and E101 stops firing the moment any 2.x package
+  is present, so the half-migration would have silenced the rule that was
+  telling the truth.
+
+### Fixed
+
+- **Two moderate advisories, by subtraction.** `qs` arrived through
+  `body-parser` through `express` through the 1.x SDK, which pulls a whole HTTP
+  and OAuth stack that a stdio server never speaks. `pnpm audit --prod` now
+  reports no known vulnerabilities, and production dependencies went from 30 to
+  13.
+
+### Notes
+
+- No rule changed, so no grade moved. `rulesVersion` is untouched and the
+  published skills index does not need regenerating.
+- `check --skill`, `weigh`, `find` and `test` are byte-identical in behaviour;
+  the only thing that moved is what `efaimo mcp` puts on the wire.
+
 ## [0.4.0] - 2026-09-03
 
 ### Fixed
@@ -408,6 +455,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[0.5.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.5.0
 [0.4.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.4.0
 [0.3.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.3.0
 [0.2.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.2.0

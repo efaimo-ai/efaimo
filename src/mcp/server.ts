@@ -1,6 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { McpServer } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { z } from "zod";
 import { checkSkillSet } from "../check/check.js";
 import { weighSkills } from "../weigh/weigh.js";
 import { findSkills } from "../skills/parse.js";
@@ -14,114 +14,99 @@ import { VERSION } from "../version.js";
  * and open no socket (unlike `check --mcp`, which connects to a live server), and
  * `test` is not exposed at all because it spends tokens. That keeps the surface
  * safe for an agent to call unattended.
+ *
+ * Built on the 2.x SDK line since 0.5.0. The 1.x line speaks 2025-11-25 and
+ * cannot answer `server/discover` or carry the SEP-2549 cache fields, so this
+ * server failed two MUST-level items of the specification the rest of this tool
+ * audits other servers against, and the skill this project publishes about that
+ * migration opens with "upgrade the SDK first". It was the only server we ship
+ * and the only one we had not migrated.
+ *
+ * `serveStdio` owns the era decision rather than this file: the opening exchange
+ * selects it, one instance is pinned for the connection, and a 2025-era client
+ * that opens with `initialize` is still served. Registering the tools once, on a
+ * factory that serves both eras, is the whole reason to use it instead of
+ * wiring a transport by hand.
  */
-
-interface JsonSchema {
-  type: "object";
-  properties: Record<string, { type: string; description: string }>;
-  required: string[];
-  additionalProperties: false;
-}
-
-interface ToolAnnotations {
-  readOnlyHint: boolean;
-  idempotentHint: boolean;
-  openWorldHint: boolean;
-}
-
-interface ToolDef {
-  name: string;
-  description: string;
-  inputSchema: JsonSchema;
-  annotations: ToolAnnotations;
-  run: (args: Record<string, unknown>) => Promise<string>;
-}
 
 // Both tools only read local files, so the same hints apply: safe to call without
 // a confirmation, safe to repeat, and not reaching out to any external service.
-const READ_ONLY: ToolAnnotations = { readOnlyHint: true, idempotentHint: true, openWorldHint: false };
+const READ_ONLY = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
 
-function requireString(args: Record<string, unknown>, key: string): string {
-  const v = args[key];
-  if (typeof v !== "string" || v.trim() === "") {
-    throw new Error(`"${key}" is required and must be a non-empty string`);
-  }
-  return v;
-}
+// One shared shape. `.min(1)` is the schema saying what `requireString` used to
+// say at runtime: an empty path is not a path. Under the 2.x registration the
+// SDK validates against this before the handler runs, so the check moved from
+// our code into the contract, which is where a client can also see it.
+const pathInput = (what: string) => z.object({ path: z.string().min(1).describe(what) });
 
-const pathSchema = (what: string): JsonSchema => ({
-  type: "object",
-  properties: { path: { type: "string", description: what } },
-  required: ["path"],
-  additionalProperties: false,
+const CHECK_DESCRIPTION =
+  "Lint an Agent Skill, or a folder of skills, for spec compliance, trigger quality, " +
+  "context-window cost, reference integrity, and injection hygiene. Returns a grade from " +
+  "A to F and the findings. Read-only: reads files only.";
+
+const WEIGH_DESCRIPTION =
+  "Measure the context-window token cost of an Agent Skill: the metadata loaded into every " +
+  "session and the body loaded when the skill triggers. Returns token counts per skill. " +
+  "Read-only: reads files only.";
+
+const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
+const failure = (e: unknown) => ({
+  content: [{ type: "text" as const, text: `error: ${e instanceof Error ? e.message : String(e)}` }],
+  isError: true,
 });
 
-const TOOLS: ToolDef[] = [
-  {
-    name: "efaimo_check_skill",
-    description:
-      "Lint an Agent Skill, or a folder of skills, for spec compliance, trigger quality, " +
-      "context-window cost, reference integrity, and injection hygiene. Returns a grade from " +
-      "A to F and the findings. Read-only: reads files only.",
-    inputSchema: pathSchema("Path to a SKILL.md file or a directory that contains skills."),
-    annotations: READ_ONLY,
-    async run(args) {
-      const p = requireString(args, "path");
-      const res = await checkSkillSet(p, p);
-      if (res.perSkill.length === 1 && res.setFindings.length === 0) {
-        return renderCheckMarkdown(res.perSkill[0]!.report);
+export function buildMcpServer(): McpServer {
+  const server = new McpServer({ name: "efaimo", version: VERSION }, { capabilities: { tools: {} } });
+
+  server.registerTool(
+    "efaimo_check_skill",
+    {
+      description: CHECK_DESCRIPTION,
+      inputSchema: pathInput("Path to a SKILL.md file or a directory that contains skills."),
+      annotations: READ_ONLY,
+    },
+    async ({ path }) => {
+      try {
+        const res = await checkSkillSet(path, path);
+        if (res.perSkill.length === 1 && res.setFindings.length === 0) {
+          return text(renderCheckMarkdown(res.perSkill[0]!.report));
+        }
+        return text(renderSkillSetMarkdown(res));
+      } catch (e) {
+        return failure(e);
       }
-      return renderSkillSetMarkdown(res);
     },
-  },
-  {
-    name: "efaimo_weigh_skill",
-    description:
-      "Measure the context-window token cost of an Agent Skill: the metadata loaded into every " +
-      "session and the body loaded when the skill triggers. Returns token counts per skill. " +
-      "Read-only: reads files only.",
-    inputSchema: pathSchema("Path to a SKILL.md file or a directory that contains skills."),
-    annotations: READ_ONLY,
-    async run(args) {
-      const p = requireString(args, "path");
-      const set = findSkills(p);
-      if (!set.skills.length) throw new Error(`no SKILL.md found under "${p}"`);
-      return renderWeighMarkdown(await weighSkills(set));
+  );
+
+  server.registerTool(
+    "efaimo_weigh_skill",
+    {
+      description: WEIGH_DESCRIPTION,
+      inputSchema: pathInput("Path to a SKILL.md file or a directory that contains skills."),
+      annotations: READ_ONLY,
     },
-  },
-];
-
-export function buildMcpServer(): Server {
-  const server = new Server({ name: "efaimo", version: VERSION }, { capabilities: { tools: {} } });
-
-  server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: TOOLS.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-      annotations: t.annotations,
-    })),
-  }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const tool = TOOLS.find((t) => t.name === req.params.name);
-    if (!tool) {
-      return { content: [{ type: "text" as const, text: `unknown tool: ${req.params.name}` }], isError: true };
-    }
-    try {
-      const text = await tool.run(req.params.arguments ?? {});
-      return { content: [{ type: "text" as const, text }] };
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return { content: [{ type: "text" as const, text: `error: ${message}` }], isError: true };
-    }
-  });
+    async ({ path }) => {
+      try {
+        const set = findSkills(path);
+        if (!set.skills.length) throw new Error(`no SKILL.md found under "${path}"`);
+        return text(renderWeighMarkdown(await weighSkills(set)));
+      } catch (e) {
+        return failure(e);
+      }
+    },
+  );
 
   return server;
 }
 
 export async function runMcpServer(): Promise<void> {
-  const server = buildMcpServer();
-  await server.connect(new StdioServerTransport());
+  // A factory, not an instance: `serveStdio` pins one per connection after the
+  // opening exchange tells it which era it is talking to.
+  serveStdio(() => buildMcpServer(), {
+    onerror: (e) => console.error(`efaimo mcp: ${e.message}`),
+  });
   console.error(`efaimo mcp v${VERSION}: read-only skill tools ready on stdio`);
+  // stdin holds the process open; there is nothing to await. Returning a promise
+  // that never settles would only make the shutdown path harder to read.
+  await new Promise<void>(() => {});
 }
