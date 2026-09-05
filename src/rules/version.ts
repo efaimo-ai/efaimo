@@ -12,6 +12,11 @@
  *        no `rulesVersion` field at all; the absence IS the value.
  *   "2"  the first ruleset that declares itself. Adds the findability family
  *        (E141-E145), which no earlier version had.
+ *   "3"  adds S108, a reference file nothing points at. Reported and not
+ *        scored, so no grade moves with it; the number moves anyway, because a
+ *        report from this ruleset carries a rule id that "2" could not have
+ *        produced, and a diff across the two would attribute that to the
+ *        subject.
  *
  * Bump it when a rule is added, removed, renumbered, or changed in what it
  * fires on. `test/meta.test.ts` pins the rule inventory, so an added or
@@ -23,4 +28,4 @@
  * would make it move on every release whether or not a rule moved, which is
  * the thing it exists to distinguish.
  */
-export const RULES_VERSION = "2";
+export const RULES_VERSION = "3";

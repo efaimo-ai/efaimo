@@ -358,7 +358,7 @@ More recipes (pre-commit, GitLab, editor audit, programmatic use):
 
 | family | covers |
 |---|---|
-| **S101 to S106** | skills: frontmatter and trigger quality, trigger collisions, context budget, reference integrity, injection hygiene |
+| **S101 to S108** | skills: frontmatter and trigger quality, trigger collisions, context budget, reference integrity, injection hygiene, a filename one capitalisation away from `SKILL.md`, and a reference file nothing points at _(S108 is unreleased: on `main`, not yet in what `npx efaimo` installs)_ |
 | **E101 to E118** | MCP 2026-07-28 readiness: deprecated primitives, statelessness, `server/discover`, `resultType`, cache fields, transport |
 | **E121 to E128, E130** | MCP quality: description quality, annotations, schema hygiene, tool-count and token-cost budgets |
 | **E141 to E146** | MCP findability: exclusive vocabulary, whether a search returns the tool, indistinguishable pairs, names that carry no domain word |

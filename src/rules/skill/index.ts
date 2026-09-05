@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Finding, SkillRule } from "../../core/types.js";
 import { scanTextForInjection } from "../injection.js";
 import { tokenize, QUERY_STOPWORDS } from "../../find/tokenize.js";
-import { formatTokens } from "../../util/misc.js";
+import { formatTokens, readTextSafe, isBinaryPath } from "../../util/misc.js";
 
 const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const STANDARD_FIELDS = new Set(["name", "description", "license", "compatibility", "metadata", "allowed-tools"]);
@@ -315,4 +315,116 @@ const s106: SkillRule = {
   },
 };
 
-export const SKILL_RULES: SkillRule[] = [s101, s102, s103, s104, s105, s106];
+// S108. A file under references/ that nothing points at.
+//
+// Found on 2026-09-04 in two of this project's own seven published skills:
+// read-back shipped a 4.6 KB failure gallery that had been growing for a
+// month, unreleased-guard shipped the-gap.md, and no SKILL.md linked to
+// either. Both were packaged, both installed byte-perfect into a user's skills
+// directory, and an agent had no route to them. The agentskills.io layout puts
+// material "loaded into context as needed" under references/, and the only
+// thing that can cause a load is a path in the instructions. Installer tests,
+// house style and an A(100) were all green about it, because none of them is
+// about whether a shipped file is reachable.
+//
+// Reachable means: a reference the parser already resolved (a markdown link
+// or a backticked path), the file's skill-relative path appearing anywhere in
+// the body, or an ancestor directory named with its trailing slash ("see
+// references/"); and transitively the same from any reference file that is
+// itself reached, because a reader who opens references/api.md can follow a
+// link inside it. The lenient direction is deliberate: a false red here
+// teaches the reader to skip the rule.
+//
+// Scoped to references/ on purpose. scripts/ is executed rather than read and
+// assets/ is consumed by scripts, so an unmentioned file there is a different
+// claim. Measured on the public corpus at the pinned commits before this was
+// written (research/skills-index/manifest.json): 2 of 36 skills carry a
+// references/ directory at all, 4 files between them, no orphan. Our own set
+// had two on 2026-09-04 and has none since. There is no population to
+// calibrate a penalty on, so this is reported without being scored, the way
+// S105 is; scoring it is a separate decision that has to move grades with
+// evidence behind it.
+const S108_MAX = 10;
+
+const s108: SkillRule = {
+  id: "S108",
+  title: "reference file nothing points at",
+  surface: "skill",
+  check({ skill }) {
+    const refDir = path.join(skill.dir, "references");
+    const prefix = refDir + path.sep;
+    const candidates = skill.files.filter((f) => f.path.startsWith(prefix));
+    if (!candidates.length) return [];
+
+    const rel = (abs: string) => path.relative(skill.dir, abs).split(path.sep).join("/");
+    // The file's own path, or any ancestor directory of it named on its own
+    // with its trailing slash, appearing in the text.
+    //
+    // "On its own" is load-bearing and the first version did not have it: it
+    // asked whether the text contained "references/", and every link to a
+    // sibling file under references/ contains exactly that, so linking ONE
+    // reference file marked every other file in the directory as reached and
+    // the rule could not fire on the fixture written to make it fire. The
+    // slash has to be followed by something that cannot continue a path.
+    const dirNamed = (text: string, dir: string) =>
+      new RegExp(dir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "/(?![A-Za-z0-9_.-])").test(text);
+    const mentions = (text: string, r: string) => {
+      if (text.includes(r)) return true;
+      const parts = r.split("/");
+      for (let i = 1; i < parts.length; i++) {
+        if (dirNamed(text, parts.slice(0, i).join("/"))) return true;
+      }
+      return false;
+    };
+
+    const reached = new Set<string>();
+    const resolvedRefs = new Set(
+      skill.referencedPaths.filter((x) => x.exists && !x.escapes).map((x) => path.resolve(x.resolved)),
+    );
+    for (const c of candidates) {
+      if (resolvedRefs.has(path.resolve(c.path)) || mentions(skill.body, rel(c.path))) reached.add(c.path);
+    }
+
+    // Transitive: a reached text file can point at its siblings, by the
+    // skill-relative path or by a path relative to itself.
+    const scanned = new Set<string>();
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const r of [...reached]) {
+        if (scanned.has(r) || isBinaryPath(r)) continue;
+        scanned.add(r);
+        const text = readTextSafe(r);
+        if (text === undefined) continue;
+        const from = path.dirname(r);
+        for (const c of candidates) {
+          if (reached.has(c.path)) continue;
+          const own = path.relative(from, c.path).split(path.sep).join("/");
+          if (mentions(text, rel(c.path)) || text.includes(own)) {
+            reached.add(c.path);
+            grew = true;
+          }
+        }
+      }
+    }
+
+    const label = skillLabel(skill);
+    const findings: Finding[] = [];
+    for (const c of candidates) {
+      if (reached.has(c.path)) continue;
+      if (findings.length >= S108_MAX) break;
+      findings.push({
+        ruleId: "S108",
+        severity: "warn",
+        title: "reference file nothing points at",
+        message: `"${rel(c.path)}" ships with the skill and nothing in SKILL.md, or in any reference it does reach, names it; an agent has no path to it, so it costs the reader disk and the publisher maintenance and is never loaded`,
+        target: label,
+        fixHint: "link it from SKILL.md at the point where it applies, or delete it",
+        graded: false,
+      });
+    }
+    return findings;
+  },
+};
+
+export const SKILL_RULES: SkillRule[] = [s101, s102, s103, s104, s105, s106, s108];

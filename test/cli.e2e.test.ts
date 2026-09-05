@@ -163,7 +163,8 @@ describe.skipIf(!built)("cli e2e (built dist)", () => {
       expect(r.code).toBe(0);
       const parsed = JSON.parse(r.out);
       expect(parsed.kind).toBe("find");
-      expect(parsed.rulesVersion).toBe("2");
+      // Pinned by hand, like the inventory in meta.test.ts: "3" since S108.
+      expect(parsed.rulesVersion).toBe("3");
       expect(parsed.data.distinct.total).toBe(3);
       expect(parsed.data.method.bm25.k1).toBe(1.2);
     });

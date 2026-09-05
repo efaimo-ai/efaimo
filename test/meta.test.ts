@@ -74,14 +74,16 @@ describe("meta", () => {
       "E110", "E111", "E112", "E113", "E114", "E115", "E116", "E117", "E118",
       "E121", "E122", "E123", "E124", "E125", "E126", "E127", "E128", "E130",
       "E141", "E142", "E143", "E144", "E145", "E146",
-      "S101", "S102", "S103", "S104", "S105", "S106",
+      "S101", "S102", "S103", "S104", "S105", "S106", "S108",
     ]);
     // An empty family would pass the loops below without this. The dash guard
     // further down this file makes the same assertion about its own harvest.
     expect(FIND_RULES.length).toBe(6);
-    // The findability family arrived with ruleset "2". If this list ever
-    // changes again, that number has to move with it.
-    expect(RULES_VERSION).toBe("2");
+    // The findability family arrived with ruleset "2" and S108 with "3". If
+    // this list ever changes again, that number has to move with it. S107 is
+    // not in this list because it is emitted by checkSkillSet rather than by a
+    // SkillRule: its subject is a file that is not a skill.
+    expect(RULES_VERSION).toBe("3");
   });
 
   it("findability rule ids do not collide with the readiness range", () => {

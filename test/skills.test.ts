@@ -292,3 +292,96 @@ describe("S107: a filename one capitalisation away from a skill", () => {
     }
   });
 });
+
+describe("S108: a reference file nothing points at", () => {
+  // Two of this project's own published skills shipped a reference file that
+  // no SKILL.md linked to, for a month in one case, and every instrument was
+  // green: the installer copied it byte-perfect, the grade was A(100), and
+  // nothing asked whether an agent could ever reach it.
+  function skillWith(body: string, files: Record<string, string>) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-orphan-"));
+    const dir = path.join(root, "probe");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "SKILL.md"),
+      `---\nname: probe\ndescription: Use when probing reference reachability, naming concrete things a reader would type.\n---\n\n# probe\n\n${body}\n`,
+    );
+    for (const [rel, content] of Object.entries(files)) {
+      const p = path.join(dir, ...rel.split("/"));
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, content);
+    }
+    return root;
+  }
+  const s108 = (res: Awaited<ReturnType<typeof checkSkillSet>>) =>
+    res.perSkill[0]!.report.findings.filter((f) => f.ruleId === "S108");
+
+  it("reports a reference file that no link, path or directory mention reaches", async () => {
+    const root = skillWith("See [the gallery](references/gallery.md).", {
+      "references/gallery.md": "# gallery\n",
+      "references/orphan.md": "# nobody links here\n",
+    });
+    try {
+      const found = s108(await checkSkillSet(root, "probe"));
+      expect(found).toHaveLength(1);
+      expect(found[0]!.message).toContain("references/orphan.md");
+      expect(found[0]!.severity).toBe("warn");
+      expect(found[0]!.graded).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("is silent for every way a reader can be pointed at the file", async () => {
+    const root = skillWith(
+      "Read [a](references/a.md), then `references/b.md`, then references/c.md, and everything under references/deep/ if needed.",
+      {
+        "references/a.md": "a\n",
+        "references/b.md": "b\n",
+        "references/c.md": "c\n",
+        "references/deep/d.md": "d\n",
+      },
+    );
+    try {
+      expect(s108(await checkSkillSet(root, "probe"))).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("follows links inside a reference it reached", async () => {
+    const root = skillWith("Start at [the index](references/index.md).", {
+      "references/index.md": "See [second](second.md) and references/third.md.\n",
+      "references/second.md": "second\n",
+      "references/third.md": "third\n",
+    });
+    try {
+      expect(s108(await checkSkillSet(root, "probe"))).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not move the grade, because it is reported and not scored", async () => {
+    const clean = skillWith("See [a](references/a.md).", { "references/a.md": "a\n" });
+    const withOrphan = skillWith("See [a](references/a.md).", { "references/a.md": "a\n", "references/b.md": "b\n" });
+    try {
+      const a = await checkSkillSet(clean, "a");
+      const b = await checkSkillSet(withOrphan, "b");
+      expect(s108(b)).toHaveLength(1);
+      expect(b.perSkill[0]!.report.grade).toEqual(a.perSkill[0]!.report.grade);
+    } finally {
+      fs.rmSync(clean, { recursive: true, force: true });
+      fs.rmSync(withOrphan, { recursive: true, force: true });
+    }
+  });
+
+  it("says nothing about a skill with no references directory", async () => {
+    const root = skillWith("Run `scripts/run.sh`.", { "scripts/run.sh": "#!/bin/sh\n" });
+    try {
+      expect(s108(await checkSkillSet(root, "probe"))).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

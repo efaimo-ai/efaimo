@@ -4,6 +4,48 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] 0.6.0
+
+Everything in this section is **(unreleased)**: it exists on `main` and not in
+what `npx efaimo` installs. These annotations come off in the commit BEFORE the
+tag, never in the tag commit, because registries render the tagged tree.
+
+### Added
+
+- **S108: a reference file nothing points at** _(unreleased)_. A file under
+  `references/` that no markdown link or backticked path resolves to, whose
+  path never appears in `SKILL.md`, whose directory is never named there, and
+  that no reference file which IS reached mentions either. It ships in the
+  package, installs byte-perfect, and an agent has no route to it.
+
+  Found in this project's own skills on 2026-09-04: `read-back` had shipped a
+  4.6 KB failure gallery that grew for a month with nothing linking to it, and
+  `unreleased-guard` had shipped `the-gap.md` the same way. The installer
+  tests, the house style guard and an A(100) were all green, because none of
+  them is about whether a shipped file is reachable. The workspace that
+  publishes those skills got a checker the same day; this is the rule for
+  everyone else's `references/`.
+
+  Reported and **not scored**, the way S105 is. Measured before it was
+  written, on the public corpus at the commits `research/skills-index/manifest.json`
+  pins: 2 of 36 skills carry a `references/` directory at all, 4 files between
+  them, no orphan, so there is no population to calibrate a penalty on and no
+  published grade moves. Scoring it is a separate decision. It fires under
+  `--strict`, which is where our own seven repositories run it.
+
+  Transitive on purpose: a reader who opens `references/api.md` can follow a
+  link inside it, so a file reached that way is not an orphan. Scoped to
+  `references/` on purpose: `scripts/` is executed rather than read and
+  `assets/` is consumed by scripts, so an unmentioned file there is a
+  different claim.
+
+### Changed
+
+- **`rulesVersion` is `3`** _(unreleased)_. No grade moves with S108, but a
+  report from this ruleset carries a rule id that ruleset `2` could not have
+  produced, and `check --diff` across the two would attribute that to the
+  subject rather than to the ruler.
+
 ## [0.5.0] - 2026-09-04
 
 ### Changed
