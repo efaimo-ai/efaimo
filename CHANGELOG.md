@@ -46,6 +46,39 @@ tag, never in the tag commit, because registries render the tagged tree.
   produced, and `check --diff` across the two would attribute that to the
   subject rather than to the ruler.
 
+### Security
+
+- **Seven advisories against the MCP SDK and zod, fixed by upgrading**
+  _(unreleased)_. `@modelcontextprotocol/client` and
+  `@modelcontextprotocol/server` move from 2.0.0 to 2.3.1, the first release
+  that carries every patch, and still pinned exactly. zod's floor moves from
+  `^4.5.4` to `^4.6.6`. `pnpm audit --prod` went from 7 findings (5 high, 2
+  moderate) to none.
+
+  What they reach in this tool, read from the call sites: `efaimo mcp` serves
+  over stdio only, so the four server advisories about the HTTP transport
+  (GHSA-f897-62hf-6gxq body size, GHSA-jm63-cq47-j5jp shared transport,
+  GHSA-46jr-4wx8-v453 memory, GHSA-rvq5-wwqv-78pq bearer auth) describe code it
+  never runs. The OAuth advisory on the client (GHSA-6qxp-vccf-f47h) needs an
+  auth provider, and efaimo passes none. The one with a plausible path is
+  GHSA-6prh-2h8m-c8cw, headers re-sent across an origin redirect: `--header`
+  values go to Streamable HTTP and legacy SSE targets, and `requestInit` sets
+  `redirect: "error"`, but nobody has shown that every request the SSE
+  fallback makes inherits it. zod (GHSA-mrhx-c7xc-m3w5) has no known path here.
+
+  Who gets it when: zod's range floats, so a fresh `npx efaimo@0.5.0` already
+  resolves a patched zod. The SDK pins are exact, so that half reaches users
+  with the next release and not before.
+
+  Measured after the upgrade with the same command as 0.5.0's entry: `check
+  --mcp "node dist/cli.js mcp"` still reports `grade A (100)` and `clean,
+  nothing to migrate`.
+
+- **Ten dev-only advisories, fixed by moving vitest from 4.1.10 to 4.1.12**
+  _(unreleased)_, which re-resolves vite from 8.2.0 to 8.3.5 and source-map-js
+  to 1.2.2. None of them ships in the package; `pnpm audit` over every
+  dependency now finds nothing.
+
 ## [0.5.0] - 2026-09-04
 
 ### Changed
