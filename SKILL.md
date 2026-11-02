@@ -4,7 +4,7 @@ description: Audit MCP servers and Agent Skills for quality and context-window c
 license: Apache-2.0
 metadata:
   version: "0.6.0"
-  homepage: "https://efaimo.ai"
+  homepage: "https://efaimo.com"
 ---
 
 # efaimo
@@ -79,7 +79,7 @@ rule reference: https://github.com/efaimo-ai/efaimo/blob/main/docs/RULES.md
 
 ## Siblings
 
-Every skill in this set is about a report that was true about the wrong thing. The set: https://efaimo.ai/skills
+Every skill in this set is about a report that was true about the wrong thing. The set: https://efaimo.com/skills
 
 - `denominator` - the counts efaimo prints are only worth as much as the sets they were taken over.
 - `mcp-stateless-migration` - when `check --mcp` prints a readiness list and you want to work it.
