@@ -4,15 +4,11 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] 0.6.0
-
-Everything in this section is **(unreleased)**: it exists on `main` and not in
-what `npx efaimo` installs. These annotations come off in the commit BEFORE the
-tag, never in the tag commit, because registries render the tagged tree.
+## [0.6.0] - 2026-11-02
 
 ### Added
 
-- **S108: a reference file nothing points at** _(unreleased)_. A file under
+- **S108: a reference file nothing points at**. A file under
   `references/` that no markdown link or backticked path resolves to, whose
   path never appears in `SKILL.md`, whose directory is never named there, and
   that no reference file which IS reached mentions either. It ships in the
@@ -41,15 +37,15 @@ tag, never in the tag commit, because registries render the tagged tree.
 
 ### Changed
 
-- **`rulesVersion` is `3`** _(unreleased)_. No grade moves with S108, but a
+- **`rulesVersion` is `3`**. No grade moves with S108, but a
   report from this ruleset carries a rule id that ruleset `2` could not have
   produced, and `check --diff` across the two would attribute that to the
   subject rather than to the ruler.
 
 ### Security
 
-- **Seven advisories against the MCP SDK and zod, fixed by upgrading**
-  _(unreleased)_. `@modelcontextprotocol/client` and
+- **Seven advisories against the MCP SDK and zod, fixed by upgrading**.
+  `@modelcontextprotocol/client` and
   `@modelcontextprotocol/server` move from 2.0.0 to 2.3.1, the first release
   that carries every patch, and still pinned exactly. zod's floor moves from
   `^4.5.4` to `^4.6.6`. `pnpm audit --prod` went from 7 findings (5 high, 2
@@ -68,14 +64,14 @@ tag, never in the tag commit, because registries render the tagged tree.
 
   Who gets it when: zod's range floats, so a fresh `npx efaimo@0.5.0` already
   resolves a patched zod. The SDK pins are exact, so that half reaches users
-  with the next release and not before.
+  with this release and not before.
 
   Measured after the upgrade with the same command as 0.5.0's entry: `check
   --mcp "node dist/cli.js mcp"` still reports `grade A (100)` and `clean,
   nothing to migrate`.
 
-- **Ten dev-only advisories, fixed by moving vitest from 4.1.10 to 4.1.12**
-  _(unreleased)_, which re-resolves vite from 8.2.0 to 8.3.5 and source-map-js
+- **Ten dev-only advisories, fixed by moving vitest from 4.1.10 to 4.1.12**,
+  which re-resolves vite from 8.2.0 to 8.3.5 and source-map-js
   to 1.2.2. None of them ships in the package; `pnpm audit` over every
   dependency now finds nothing.
 
@@ -530,6 +526,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[0.6.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.6.0
 [0.5.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.5.0
 [0.4.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.4.0
 [0.3.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.3.0
