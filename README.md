@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="efaimo. The audit CLI for Agent Skills and MCP servers." width="820">
+  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/banner.png" alt="efaimo. The audit CLI for Agent Skills and MCP servers." width="820">
 </p>
 
 <p align="center">
@@ -87,7 +87,7 @@ csv-cleanup skill that a capable model does not need, and a skill that encodes a
 convention the model cannot guess.
 
 <p align="center">
-  <img src="assets/test-ab.png" alt="efaimo test A/B results: csv-cleanup measures +0 points (no measurable effect) while contoso-crm-import measures +100 points (helps); both skills lint clean at grade A" width="880">
+  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/test-ab.png" alt="efaimo test A/B results: csv-cleanup measures +0 points (no measurable effect) while contoso-crm-import measures +100 points (helps); both skills lint clean at grade A" width="880">
 </p>
 
 <details>
@@ -137,7 +137,7 @@ npx efaimo check --mcp "npx -y my-server"    # quality grade + 2026-07-28 migrat
 per tool, with an optional `--anthropic` exact Claude count.
 
 <p align="center">
-  <img src="assets/demo.png" alt="efaimo weigh example output" width="720">
+  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/demo.png" alt="efaimo weigh example output" width="720">
 </p>
 
 `check --mcp` connects live (it speaks both the legacy handshake and the new
@@ -155,7 +155,7 @@ surface that is an A. Pass `--strict-readiness` when you want CI to fail on
 the diff. Full list: [docs/RULES.md](./docs/RULES.md).
 
 <p align="center">
-  <img src="assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
+  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
 </p>
 
 *(That is the official reference server: solid quality, four things left to
@@ -253,7 +253,7 @@ your host actually serializes it, and grades the quality, before any of it reach
 your context window.
 
 <p align="center">
-  <img src="assets/architecture.png" alt="efaimo weighs, checks, and tests what your agent loads" width="880">
+  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/architecture.png" alt="efaimo weighs, checks, and tests what your agent loads" width="880">
 </p>
 
 ## How it compares
@@ -349,7 +349,7 @@ npx efaimo weigh "npx -y my-server" --diff base.json --allow-increase 10
 `--badge badge.svg` writes an SVG plus a shields.io endpoint JSON for your
 README. These two are real efaimo output for the reference server:
 
-<img src="assets/badge-weigh.svg" alt="context cost: 1120 tok (o200k)"> <img src="assets/badge-grade.svg" alt="efaimo: A (95)">
+<img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/badge-weigh.svg" alt="context cost: 1120 tok (o200k)"> <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/badge-grade.svg" alt="efaimo: A (95)">
 
 More recipes (pre-commit, GitLab, editor audit, programmatic use):
 [docs/INTEGRATIONS.md](./docs/INTEGRATIONS.md).
