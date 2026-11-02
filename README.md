@@ -155,11 +155,12 @@ surface that is an A. Pass `--strict-readiness` when you want CI to fail on
 the diff. Full list: [docs/RULES.md](./docs/RULES.md).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/check.png" alt="efaimo check example output: quality grade A (95) plus a four-item 2026-07-28 migration diff for the reference server" width="800">
+  <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/check.png" alt="efaimo check example output: quality grade A (95) plus a one-item 2026-07-28 migration diff for the reference server" width="800">
 </p>
 
-*(That is the official reference server: solid quality, four things left to
-migrate.)*
+*(That is the official reference server: solid quality, one thing left to
+migrate. It had four until it moved to the 2.x SDK, which answers
+`server/discover` and fills in the cache and `resultType` fields for you.)*
 
 <details>
 <summary>The same output as copyable text</summary>
@@ -171,14 +172,9 @@ grade A (95)   quality: 0 errors  1 warning  0 info
   ! E122  tool "echo": description misses 3/4 quality axes (length 40..600;
           says when to use it; mentions the result)
 
-2026-07-28 readiness  4 items to migrate (a migration diff, not graded)
+2026-07-28 readiness  1 item to migrate (a migration diff, not graded)
   ! E104  server declares the logging capability; MCP Logging is deprecated in
           2026-07-28 (SEP-2577) and logging/setLevel is removed
-  ! E106  server/discover is not implemented (-32601 Method not found)
-  ! E118  tools/list result omits ttlMs and/or cacheScope, which 2026-07-28
-          requires on list and resource-read results (SEP-2549, CacheableResult)
-  i E107  results do not carry the resultType field required in 2026-07-28
-          ("complete" | "input_required")
 ```
 
 </details>
@@ -349,7 +345,7 @@ npx efaimo weigh "npx -y my-server" --diff base.json --allow-increase 10
 `--badge badge.svg` writes an SVG plus a shields.io endpoint JSON for your
 README. These two are real efaimo output for the reference server:
 
-<img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/badge-weigh.svg" alt="context cost: 1120 tok (o200k)"> <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/badge-grade.svg" alt="efaimo: A (95)">
+<img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/badge-weigh.svg" alt="context cost: 1759 tok (o200k)"> <img src="https://raw.githubusercontent.com/efaimo-ai/efaimo/main/assets/badge-grade.svg" alt="efaimo: A (95)">
 
 More recipes (pre-commit, GitLab, editor audit, programmatic use):
 [docs/INTEGRATIONS.md](./docs/INTEGRATIONS.md).
