@@ -193,21 +193,24 @@ async function finishIntrospection(
       notes,
     };
   } finally {
-    // On Windows the SDK's close() kills only the cmd.exe wrapper for npx/.cmd
-    // servers; tree-kill the child first so the real server is not orphaned.
-    const pid = (transport as { pid?: number | null }).pid;
-    if (pid && process.platform === "win32") {
-      try {
-        crossSpawn.sync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
-      } catch {
-        /* ignore */
-      }
-    }
     await safeClose(client, transport);
   }
 }
 
 async function safeClose(client: Client, transport: { close(): Promise<void> }): Promise<void> {
+  // On Windows the SDK's close() kills only the cmd.exe wrapper for npx/.cmd
+  // servers; tree-kill the child first so the real server is not orphaned.
+  // Every close needs it: when only the success path did this, a failed
+  // handshake left the server holding this process's pipes and the CLI hung.
+  // Read before close(), which forgets the pid.
+  const pid = (transport as { pid?: number | null }).pid;
+  if (pid && process.platform === "win32") {
+    try {
+      crossSpawn.sync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } catch {
+      /* ignore */
+    }
+  }
   try {
     await client.close();
   } catch {

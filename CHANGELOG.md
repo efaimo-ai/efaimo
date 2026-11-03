@@ -4,6 +4,23 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] 0.6.1
+
+Everything in this section is **(unreleased)**: it exists on `main` and not in
+what `npx efaimo` installs. These annotations come off in the commit BEFORE the
+tag, never in the tag commit, because registries render the tagged tree.
+
+### Fixed
+
+- **A stdio server whose handshake fails is killed with its whole process
+  tree** _(unreleased)_. On Windows an npx or `.cmd` server runs under a
+  cmd.exe wrapper, and the SDK's `close()` ends the wrapper alone. The success
+  path already killed the tree with `taskkill /T`; the failure path only
+  closed, so the real server outlived the audit holding efaimo's stdio pipes,
+  and the CLI printed its error and never exited. Every close now goes through
+  the tree kill. A `.cmd` fixture that never answers shows it: its server was
+  still running after the error, and now it is not.
+
 ## [0.6.0] - 2026-11-02
 
 ### Added

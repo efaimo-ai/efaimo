@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkMcpTarget } from "../src/check/check.js";
@@ -140,5 +142,49 @@ describe("mcp introspection + rules (live fixture server)", () => {
       label: "broken",
     };
     await expect(checkMcpTarget(bad, { timeoutMs: 10000, probe: false })).rejects.toThrow(/could not connect/i);
+  });
+
+  // Windows only, like the tree kill it tests: an npx or .cmd server runs there
+  // under a cmd.exe wrapper, and the SDK's close() ends the wrapper alone. The
+  // success path always killed the tree; a failed handshake only closed, so the
+  // real server lived on holding this process's pipes and the CLI never exited.
+  it.skipIf(process.platform !== "win32")("kills the whole server tree when the handshake fails", async () => {
+    const pidFile = path.join(os.tmpdir(), `efaimo-tree-${process.pid}-${Date.now()}.txt`);
+    const readPids = () =>
+      fs.existsSync(pidFile) ? fs.readFileSync(pidFile, "utf8").split("\n").filter(Boolean).map(Number) : [];
+    const alive = (pid: number) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    // A .cmd, so the SDK spawns the same cmd.exe wrapper npx gets.
+    const tree: Extract<ResolvedTarget, { kind: "stdio" }> = {
+      kind: "stdio",
+      command: path.join(here, "fixtures", "mcp-server", "server-tree.cmd"),
+      args: [pidFile],
+      label: "tree",
+    };
+    try {
+      await expect(introspectServer(tree, { timeoutMs: 2000 })).rejects.toThrow(/could not connect/i);
+      const pids = readPids();
+      expect(pids.length, "the fixture never recorded its pid, so nothing was tested").toBeGreaterThan(0);
+      // The stateless fallback kills its own spawn 200ms after it returns, so
+      // wait for the tree to go rather than sleeping a guess.
+      const deadline = Date.now() + 10000;
+      while (pids.some(alive) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 100));
+      expect(pids.filter(alive), "a server process outlived the failed handshake").toEqual([]);
+    } finally {
+      for (const pid of readPids()) {
+        try {
+          process.kill(pid);
+        } catch {
+          /* already gone */
+        }
+      }
+      fs.rmSync(pidFile, { force: true });
+    }
   });
 });
