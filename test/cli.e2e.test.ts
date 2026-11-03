@@ -307,3 +307,49 @@ describe.skipIf(!built)("secrets in a URL stay out of the output", () => {
     }
   });
 });
+
+// `--out base.json --diff base.json` is the natural ratchet: compare with the
+// last run, then keep this one. The write ran first, so the diff read back the
+// run it was comparing and reported no change, whatever had changed.
+describe.skipIf(!built)("--out and --diff naming the same file", () => {
+  const server = "node " + path.join(here, "fixtures", "mcp-server", "server.mjs");
+
+  it("weigh compares with the old run, then saves the new one", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-ratchet-"));
+    const base = path.join(dir, "base.json");
+    const total = () => JSON.parse(fs.readFileSync(base, "utf8")).data.totals.claudeStyle as number;
+    try {
+      expect(run(["weigh", "--stdio", server, "--out", base, "--timeout", "20"]).code).toBe(0);
+      const before = total();
+      // One tool instead of three, so this run is smaller than the baseline.
+      const r = run(["weigh", "--stdio", server, "--env", "FIXTURE_TOOLS=one", "--out", base, "--diff", base, "--timeout", "20"]);
+      expect(r.code).toBe(0);
+      const after = total();
+      expect(after).toBeLessThan(before);
+      const m = r.out.match(/context budget diff \(Claude-style\): ([\d,]+) -> ([\d,]+)/);
+      expect(m, "no diff line in the output").not.toBeNull();
+      expect([m![1]!, m![2]!].map((s) => Number(s.replace(/,/g, "")))).toEqual([before, after]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("check compares with the old run", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-ratchet-"));
+    const base = path.join(dir, "base.json");
+    const skill = path.join(SKILLS, "good-skill");
+    try {
+      expect(run(["check", "--skill", skill, "--out", base]).code).toBe(0);
+      // Lower the recorded grade, so the same skill checked again has improved.
+      const env = JSON.parse(fs.readFileSync(base, "utf8"));
+      env.data.grade = { ...env.data.grade, score: 50, letter: "F" };
+      fs.writeFileSync(base, JSON.stringify(env));
+      const r = run(["check", "--skill", skill, "--out", base, "--diff", base]);
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/improved 1\s+worsened 0\s+held 0/);
+      expect(JSON.parse(fs.readFileSync(base, "utf8")).data.grade.score).toBeGreaterThan(50);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

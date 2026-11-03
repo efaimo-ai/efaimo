@@ -28,6 +28,14 @@ tag, never in the tag commit, because registries render the tagged tree.
   and the line saying why was dropped. It is attached before connecting now,
   and the error carries `server stderr:` with what the server wrote.
 
+- **`--out` and `--diff` naming the same file compare with the old run**
+  _(unreleased)_. `weigh` and `check` both wrote `--out` before reading
+  `--diff`, so `--diff base.json --out base.json`, the one-command ratchet,
+  read back the run it had just written and reported no change whatever had
+  changed. The baseline is read first now, and the new run is saved after. In
+  `weigh` a baseline that cannot be read now stops the run before the results
+  print, as it already did in `check`.
+
 ### Security
 
 - **The CLI's own lines strip terminal control characters too**

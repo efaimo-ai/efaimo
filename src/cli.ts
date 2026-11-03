@@ -282,6 +282,11 @@ program
       0,
     );
 
+    // Read before --out writes: both may name one file (compare with the last
+    // run, then keep this one), and reading after the write compared the run
+    // with itself.
+    const baselineText = opts.diff ? fs.readFileSync(opts.diff, "utf8") : undefined;
+
     if (opts.out && single) {
       // Never stamped. A baseline exists to be compared against, so a field
       // that differs on every write is the one field a comparison must ignore,
@@ -324,9 +329,9 @@ program
       );
     }
 
-    if (opts.diff) {
+    if (baselineText !== undefined) {
       if (!single || single.kind !== "mcp") fail("--diff works on a single MCP server result");
-      const baselineRaw = JSON.parse(fs.readFileSync(opts.diff, "utf8")) as { data?: ServerWeighResult } | ServerWeighResult;
+      const baselineRaw = JSON.parse(baselineText) as { data?: ServerWeighResult } | ServerWeighResult;
       const baseline = ("data" in baselineRaw && baselineRaw.data ? baselineRaw.data : baselineRaw) as ServerWeighResult;
       // A skill weigh baseline also carries a `totals` object, so a bare
       // truthiness check passed it through and diffServerWeigh then died on the
@@ -440,18 +445,21 @@ program
     // written rather than just its data, because the version and rulesVersion
     // in it are what make the later comparison trustworthy.
     const baselineAndDiff = (payload: unknown) => {
+      // Read before --out writes, as weigh does: both may name one file.
+      let baseline: CheckEnvelope | undefined;
+      if (opts.diff) {
+        try {
+          baseline = JSON.parse(fs.readFileSync(opts.diff, "utf8")) as CheckEnvelope;
+        } catch (e) {
+          fail(`could not read the baseline "${opts.diff}": ${(e as Error).message}`);
+        }
+      }
       if (opts.out) {
         fs.writeFileSync(opts.out, toJsonEnvelope("check", payload, { timestamp: false }));
         console.error(pc.dim(`baseline written: ${opts.out}`));
       }
-      if (!opts.diff) return;
-      let baseline: CheckEnvelope;
-      try {
-        baseline = JSON.parse(fs.readFileSync(opts.diff, "utf8")) as CheckEnvelope;
-      } catch (e) {
-        fail(`could not read the baseline "${opts.diff}": ${(e as Error).message}`);
-        return;
-      }
+      // Not `!baseline`: a file holding `null` must reach diffCheck and be refused.
+      if (baseline === undefined) return;
       const current = JSON.parse(toJsonEnvelope("check", payload, { timestamp: false })) as CheckEnvelope;
       try {
         const d = diffCheck(baseline, current, { allowRulesDrift: opts.allowRulesDrift });
