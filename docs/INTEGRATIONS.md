@@ -29,6 +29,17 @@ Fail the build on skill regressions or a context-budget blowout.
     command: check --skill ./skills --strict
 ```
 
+An MCP server goes in `target`, which reaches efaimo as one argument with its
+spaces intact; `command` is split on spaces and cannot carry a quoted server
+command _(unreleased: `target` arrives with the next release)_:
+
+```yaml
+- uses: efaimo-ai/efaimo@v0
+  with:
+    command: check --mcp
+    target: npx -y your-server
+```
+
 Ratchet MCP tool-definition cost with the budget gate (commit `base.json` once with
 `npx efaimo weigh "npx -y your-server" --out base.json`):
 

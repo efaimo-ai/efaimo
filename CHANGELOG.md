@@ -36,6 +36,15 @@ tag, never in the tag commit, because registries render the tagged tree.
   `weigh` a baseline that cannot be read now stops the run before the results
   print, as it already did in `check`.
 
+- **The Action takes the server as its own input** _(unreleased)_. `command`
+  is expanded unquoted so a subcommand and its flags split into words, and
+  bash does not re-read quotes inside a value, so the example the input's own
+  description gave, `weigh "npx -y my-server"`, reached efaimo as `"npx`, `-y`
+  and `my-server"`. A new `target` input is passed after `command` as one
+  quoted argument, and as nothing when it is empty, so `command: check --mcp`
+  with `target: npx -y my-server` works. A workflow that sets `command` alone
+  runs exactly as before.
+
 ### Security
 
 - **The CLI's own lines strip terminal control characters too**

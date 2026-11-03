@@ -6,8 +6,12 @@ branding:
   color: "blue"
 inputs:
   command:
-    description: 'efaimo subcommand and args, e.g. `check --skill ./skills` or `weigh "npx -y my-server"`'
+    description: 'efaimo subcommand and flags, e.g. `check --skill ./skills --strict`. Split on spaces with no quoting, so a server command goes in `target`'
     required: true
+  target:
+    description: 'what to audit, passed after `command` as ONE argument, spaces and all, e.g. `npx -y my-server` with `command: check --mcp`'
+    required: false
+    default: ""
   version:
     description: "efaimo version to run (npm dist-tag or version)"
     required: false
@@ -21,7 +25,7 @@ runs:
   steps:
     - shell: bash
       working-directory: ${{ inputs.working-directory }}
-      # Both values go through env, never into the run: body. A ${{ }}
+      # Every value goes through env, never into the run: body. A ${{ }}
       # expression inside run: is substituted BEFORE bash sees the script, so
       # `command` was arbitrary code in the consumer's runner, holding the
       # consumer's secrets. Anyone wiring a PR title, branch name, issue body
@@ -31,7 +35,11 @@ runs:
       env:
         EFAIMO_VERSION: ${{ inputs.version }}
         EFAIMO_COMMAND: ${{ inputs.command }}
-      # Unquoted on purpose: the input is a subcommand plus arguments and has
-      # to word-split. It is now bash doing the splitting on a value bash
-      # received as data, not the expression engine pasting text into source.
-      run: npx -y "efaimo@$EFAIMO_VERSION" $EFAIMO_COMMAND
+        EFAIMO_TARGET: ${{ inputs.target }}
+      # `command` is unquoted on purpose: a subcommand plus flags has to
+      # word-split, and it is bash splitting a value it received as data, not
+      # the expression engine pasting text into source. Bash does not re-read
+      # quotes inside a value, though, so the `weigh "npx -y my-server"` this
+      # file used to suggest reached efaimo as three broken words. `target` is
+      # passed as one quoted word, and as nothing at all when it is empty.
+      run: npx -y "efaimo@$EFAIMO_VERSION" $EFAIMO_COMMAND ${EFAIMO_TARGET:+"$EFAIMO_TARGET"}
