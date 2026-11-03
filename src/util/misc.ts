@@ -94,6 +94,9 @@ export function* walkFiles(root: string, opts: WalkOptions = {}): Generator<stri
 export function readTextSafe(file: string, maxBytes = 512 * 1024): string | undefined {
   try {
     const stat = fs.statSync(file);
+    // A device or a FIFO reports size 0, and readFileSync then reads until an
+    // EOF that /dev/zero never sends.
+    if (!stat.isFile()) return undefined;
     if (stat.size > maxBytes) {
       const fd = fs.openSync(file, "r");
       const buf = Buffer.alloc(maxBytes);

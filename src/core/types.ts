@@ -319,7 +319,20 @@ export interface SkillInfo {
   body: string;
   bodyLines: number;
   /** `escapes` = the reference resolves outside the skill directory. weigh must not read those; S106 reports them. */
-  referencedPaths: { raw: string; resolved: string; exists: boolean; escapes: boolean; source: "link" | "code" }[];
+  referencedPaths: {
+    raw: string;
+    resolved: string;
+    exists: boolean;
+    /** Leaves the skill by its path as written (`../`). S106 reports these. */
+    escapes: boolean;
+    /**
+     * Inside the skill as written, outside it once links are followed: a
+     * symbolic link or junction on the way leads out. Never read. Kept apart
+     * from `escapes` so S106 fires on what it fired on before.
+     */
+    linksOut?: true;
+    source: "link" | "code";
+  }[];
   files: { path: string; bytes: number }[];
   parseError?: string;
 }

@@ -87,6 +87,7 @@ export async function weighServer(
 export async function weighSkills(set: SkillSet): Promise<SkillSetWeighResult> {
   const count = await loadTokenizer();
   const perSkill: SkillSetWeighResult["perSkill"] = [];
+  const linkNotes: string[] = [];
   for (const skill of set.skills) {
     const name = skill.name ?? "(unnamed)";
     const metadataTokens = count(`${name}: ${skill.description ?? ""}`);
@@ -97,6 +98,12 @@ export async function weighSkills(set: SkillSet): Promise<SkillSetWeighResult> {
       // Never read outside the skill root. S106 warns about these, but only
       // after weigh had already opened the file and counted its tokens.
       if (ref.escapes || !ref.exists || isBinaryPath(ref.resolved)) continue;
+      // Inside as written, outside once a link is followed. Said, because the
+      // referenced total is smaller than what a host following the link loads.
+      if (ref.linksOut) {
+        linkNotes.push(`not read: "${ref.raw}" in ${name} leads outside the skill through a symbolic link`);
+        continue;
+      }
       const text = readTextSafe(ref.resolved);
       if (text === undefined) continue;
       refFileCount++;
@@ -125,6 +132,7 @@ export async function weighSkills(set: SkillSet): Promise<SkillSetWeighResult> {
     notes: [
       "metadata loads at session start for every installed skill; body loads on trigger; referenced files load on demand",
       "token counts are o200k_base estimates (see docs/METHODOLOGY.md)",
+      ...linkNotes,
     ],
   };
 }

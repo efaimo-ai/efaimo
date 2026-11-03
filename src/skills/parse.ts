@@ -75,6 +75,17 @@ export function parseSkillFile(file: string): SkillInfo {
   if (typeof base.frontmatter.name === "string") base.name = base.frontmatter.name;
   if (typeof base.frontmatter.description === "string") base.description = base.frontmatter.description;
 
+  // Real paths for the containment check below. Both sides are resolved, so a
+  // skill reached through a link of its own still contains its own files.
+  const real = (p: string): string | undefined => {
+    try {
+      return fs.realpathSync(p);
+    } catch {
+      return undefined;
+    }
+  };
+  const realDir = real(dir) ?? dir;
+
   const seen = new Set<string>();
   for (const [re, source] of [
     [MD_LINK_RE, "link"],
@@ -109,11 +120,18 @@ export function parseSkillFile(file: string): SkillInfo {
       // the reader still learns the reference exists. weigh skips the read.
       const rel = path.relative(dir, resolved);
       const escapes = rel.startsWith("..") || path.isAbsolute(rel);
+      // The same question on real paths. A link (a junction on Windows) inside
+      // the skill can point anywhere, and `references/notes.md` passed the
+      // check above while the read landed in ~/.ssh.
+      const target = escapes ? undefined : real(resolved);
+      const realRel = target === undefined ? "" : path.relative(realDir, target);
+      const linksOut = realRel.startsWith("..") || path.isAbsolute(realRel);
       base.referencedPaths.push({
         raw: cleaned,
         resolved,
         exists: fs.existsSync(resolved),
         escapes,
+        ...(linksOut ? { linksOut: true as const } : {}),
         source,
       });
     }

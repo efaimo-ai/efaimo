@@ -59,6 +59,19 @@ tag, never in the tag commit, because registries render the tagged tree.
   by 0.6.0 for such a URL names the server by its full URL and will not pair
   with a new run; write it again.
 
+- **A link inside a skill is not followed out of it** _(unreleased)_. Whether
+  a referenced file stays inside the skill was decided on its path as written,
+  so `references/notes.md` passed while the read went through a symbolic link
+  (a junction on Windows) to anywhere on the disk, and `weigh` published the
+  size of what it found. Containment is now decided on real paths: a reference
+  that leads out is not read, and `weigh` says so in a note. Only regular files
+  are read at all, so a reference that resolves to a device cannot hold the run
+  reading `/dev/zero`. S106 still judges the path as written, so the only
+  number that moves is the referenced-file count of a skill whose references
+  lead out, which now holds only what the skill itself ships. Discovery never
+  followed links: `readdir` reports one as neither a file nor a directory, and
+  the walk skips it.
+
 ## [0.6.0] - 2026-11-02
 
 ### Added

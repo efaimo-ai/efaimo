@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { findSkills, parseSkillFile, SKILL_WALK_MAX_DEPTH } from "../src/skills/parse.js";
 import { checkSkillSet } from "../src/check/check.js";
 import { weighSkills } from "../src/weigh/weigh.js";
+import { readTextSafe, walkFiles } from "../src/util/misc.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SKILLS = path.join(here, "fixtures", "skills");
@@ -383,5 +384,69 @@ describe("S108: a reference file nothing points at", () => {
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+// A link inside a skill can point anywhere. Containment was decided on the
+// path as written, so `references/out/secret.md` counted as inside while the
+// read landed outside, and weigh published the size of whatever it found. A
+// junction stands in for a symlink, because on Windows a file symlink needs a
+// privilege a test run may not have; elsewhere the same call makes a symlink.
+describe("links that lead out of a skill", () => {
+  function layout() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-link-"));
+    const outside = path.join(root, "outside");
+    const skill = path.join(root, "skill");
+    fs.mkdirSync(outside);
+    fs.mkdirSync(path.join(skill, "references", "shared"), { recursive: true });
+    fs.writeFileSync(path.join(outside, "secret.md"), "not part of the skill\n".repeat(20));
+    fs.writeFileSync(path.join(skill, "references", "shared", "inner.md"), "part of the skill\n");
+    // `out` leads out of the skill; `in` leads to a directory inside it.
+    fs.symlinkSync(outside, path.join(skill, "references", "out"), "junction");
+    fs.symlinkSync(path.join(skill, "references", "shared"), path.join(skill, "references", "in"), "junction");
+    fs.writeFileSync(
+      path.join(skill, "SKILL.md"),
+      "---\nname: linked\ndescription: Use when testing links. Reads two references.\n---\n" +
+        "See [out](references/out/secret.md) and [in](references/in/inner.md).\n",
+    );
+    return { root, skill };
+  }
+
+  it("does not read through a link that leaves the skill, and says so", async () => {
+    const { root, skill } = layout();
+    try {
+      const set = findSkills(skill);
+      const refs = Object.fromEntries(set.skills[0]!.referencedPaths.map((r) => [r.raw, r]));
+      expect(refs["references/out/secret.md"]).toMatchObject({ exists: true, escapes: false, linksOut: true });
+      expect(refs["references/in/inner.md"]).toMatchObject({ exists: true, escapes: false });
+      expect(refs["references/in/inner.md"]!.linksOut).toBeUndefined();
+      const w = await weighSkills(set);
+      // The link that stays inside is still followed; the one that leaves is not.
+      expect(w.perSkill[0]!.refFileCount).toBe(1);
+      expect(w.notes.join("\n")).toMatch(/not read: "references\/out\/secret\.md" .*symbolic link/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("never walks into a linked directory", () => {
+    // A pin, not a fix: readdir's Dirent reports a link as neither a file nor a
+    // directory, so walkFiles has always skipped links rather than followed them.
+    const { root, skill } = layout();
+    try {
+      const files = [...walkFiles(skill)].map((f) => path.relative(skill, f).split(path.sep).join("/")).sort();
+      expect(files).toEqual(["SKILL.md", "references/shared/inner.md"]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads only regular files", () => {
+    // A device reports size 0, and readFileSync then reads until EOF, which
+    // /dev/zero never sends. The null device answers at once, so it is the
+    // safe one to prove the check with.
+    const device = process.platform === "win32" ? String.raw`\\.\NUL` : "/dev/null";
+    expect(fs.statSync(device).isFile()).toBe(false);
+    expect(readTextSafe(device)).toBeUndefined();
   });
 });
