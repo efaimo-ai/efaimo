@@ -21,6 +21,13 @@ tag, never in the tag commit, because registries render the tagged tree.
   the tree kill. A `.cmd` fixture that never answers shows it: its server was
   still running after the error, and now it is not.
 
+- **A server that dies during the handshake keeps its stderr in the error**
+  _(unreleased)_. The listener on the child's stderr was attached only after
+  `connect()` succeeded, so a server that exited before answering `initialize`
+  (a missing module, a missing key, a bad flag) failed with `Connection closed`
+  and the line saying why was dropped. It is attached before connecting now,
+  and the error carries `server stderr:` with what the server wrote.
+
 ## [0.6.0] - 2026-11-02
 
 ### Added

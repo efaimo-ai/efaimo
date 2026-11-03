@@ -144,6 +144,19 @@ describe("mcp introspection + rules (live fixture server)", () => {
     await expect(checkMcpTarget(bad, { timeoutMs: 10000, probe: false })).rejects.toThrow(/could not connect/i);
   });
 
+  it("keeps what a server wrote to stderr when it dies during the handshake", async () => {
+    // Node prints "Cannot find module" and exits before answering initialize.
+    // The listener used to be attached only after connect() succeeded, so the
+    // one line that says why a server failed was the line that got dropped.
+    const bad: Extract<ResolvedTarget, { kind: "stdio" }> = {
+      kind: "stdio",
+      command: process.execPath,
+      args: [path.join(here, "fixtures", "mcp-server", "does-not-exist.mjs")],
+      label: "broken",
+    };
+    await expect(introspectServer(bad, { timeoutMs: 10000 })).rejects.toThrow(/server stderr:[\s\S]*Cannot find module/);
+  });
+
   // Windows only, like the tree kill it tests: an npx or .cmd server runs there
   // under a cmd.exe wrapper, and the SDK's close() ends the wrapper alone. The
   // success path always killed the tree; a failed handshake only closed, so the

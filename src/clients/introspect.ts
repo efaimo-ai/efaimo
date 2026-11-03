@@ -37,6 +37,13 @@ export async function introspectServer(
       stderr: "pipe",
     });
     transport = stdio;
+    // Before connect(): with stderr "pipe" the SDK hands out a PassThrough at
+    // construction, and a server that dies during the handshake has written
+    // its reason by the time connect() rejects. Attached after, it was lost.
+    const errStream = (stdio as unknown as { stderr?: NodeJS.ReadableStream }).stderr;
+    errStream?.on("data", (chunk: Buffer) => {
+      if (stderrTail.length < 2048) stderrTail += chunk.toString("utf8");
+    });
     // Split the budget across the two attempts so a dead server fails in about
     // one timeout, not two: the legacy handshake got the whole timeout AND the
     // stateless fallback then re-waited the whole timeout again, so `--timeout 8`
@@ -55,11 +62,6 @@ export async function introspectServer(
       if (rc) return rc;
       throw connectError(e, target.label, stderrTail);
     }
-    // The child is spawned by connect(); its stderr stream only exists now.
-    const errStream = (stdio as unknown as { stderr?: NodeJS.ReadableStream }).stderr;
-    errStream?.on("data", (chunk: Buffer) => {
-      if (stderrTail.length < 2048) stderrTail += chunk.toString("utf8");
-    });
   } else {
     const url = new URL(target.url);
     // redirect:"error" so a hostile target cannot bounce an authenticated request
