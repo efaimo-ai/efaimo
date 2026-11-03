@@ -278,3 +278,32 @@ describe.skipIf(!built)("text from the audited side cannot drive the terminal", 
     expect(r.err.includes(ESC), "an escape byte reached stderr").toBe(false);
   });
 });
+
+// A URL's password and query values reached every line that names the target:
+// "connecting to", the final error, the --client listing, and through the
+// label the report itself. fetch also refuses a URL with credentials and puts
+// the whole URL in its message, so the error line leaked it a second time.
+describe.skipIf(!built)("secrets in a URL stay out of the output", () => {
+  const url = "http://me:hunter2@127.0.0.1:9/mcp?token=abc123";
+
+  it("as the target", () => {
+    const r = run(["weigh", url, "--timeout", "5"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/me:\*\*\*@127\.0\.0\.1:9\/mcp\?token=\*\*\*/);
+    expect(r.err + r.out).not.toMatch(/hunter2|abc123/);
+  });
+
+  it("in a --client config", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-urlcfg-"));
+    try {
+      fs.mkdirSync(path.join(dir, ".vscode"));
+      fs.writeFileSync(path.join(dir, ".vscode", "mcp.json"), JSON.stringify({ servers: { remote: { url } } }));
+      const r = run(["weigh", "--client", "vscode", "--timeout", "5"], dir);
+      expect(r.code).toBe(2);
+      expect(r.err).toMatch(/remote: http:\/\/me:\*\*\*@/);
+      expect(r.err + r.out).not.toMatch(/hunter2|abc123/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

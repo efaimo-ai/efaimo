@@ -4,7 +4,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { SSEClientTransport } from "@modelcontextprotocol/client";
 import type { ServerIntrospection, ToolDef, ResourceDef, PromptDef } from "../core/types.js";
-import type { ResolvedTarget } from "../targets/resolve.js";
+import { redactUrlsIn, type ResolvedTarget } from "../targets/resolve.js";
 import { introspectStateless } from "./stateless.js";
 import { minimalChildEnv } from "../util/childEnv.js";
 import { truncate, withTimeout } from "../util/misc.js";
@@ -226,7 +226,7 @@ async function safeClose(client: Client, transport: { close(): Promise<void> }):
 }
 
 function connectError(e: unknown, label: string, stderrTail: string): Error {
-  const base = e instanceof Error ? e.message : String(e);
+  const base = redactUrlsIn(e instanceof Error ? e.message : String(e));
   const hint = stderrTail.trim()
     ? `\n  server stderr: ${truncate(stderrTail.trim(), 400)}`
     : "";

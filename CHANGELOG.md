@@ -40,6 +40,17 @@ tag, never in the tag commit, because registries render the tagged tree.
   `check --diff` tables printed tool and skill names raw as well. All of them
   are filtered now.
 
+- **A key in a URL stays out of the output** _(unreleased)_. An http target's
+  label was the URL as typed, and the label is what the report, an `--out` file
+  and a diff all print, so a key passed as `?api_key=` was published by each of
+  them. The label now shows the password and every query value as `***`; a URL
+  with neither is left exactly as typed, so existing baselines still pair. The
+  `--client` listing, the conformance command line and connection errors are
+  redacted the same way, the last because fetch refuses a URL with credentials
+  and quotes the whole URL in its message. A `check --diff` baseline written
+  by 0.6.0 for such a URL names the server by its full URL and will not pair
+  with a new run; write it again.
+
 ## [0.6.0] - 2026-11-02
 
 ### Added

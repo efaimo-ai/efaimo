@@ -4,7 +4,7 @@ import crossSpawn from "cross-spawn";
 import { Command } from "commander";
 import pc from "picocolors";
 import { VERSION } from "./version.js";
-import { resolveTarget, type ResolvedTarget } from "./targets/resolve.js";
+import { redactUrl, resolveTarget, type ResolvedTarget } from "./targets/resolve.js";
 import { loadClientServers, SUPPORTED_CLIENTS } from "./targets/clientConfigs.js";
 import { introspectServer } from "./clients/introspect.js";
 import { SPEC_VERSION } from "./clients/rawprobe.js";
@@ -217,7 +217,7 @@ program
         const shown =
           t.kind === "stdio"
             ? [t.command, ...t.args].join(" ") + (t.env && Object.keys(t.env).length ? `   (+${Object.keys(t.env).length} env)` : "")
-            : t.url;
+            : redactUrl(t.url);
         console.error(pc.dim(safeText(`  ${e.name}: ${shown}`)));
       }
       if (conf.fromCwd.length) {
@@ -515,7 +515,8 @@ program
           "--spec-version",
           SPEC_VERSION,
         ];
-        console.error(pc.dim(`\nrunning official MCP conformance suite:\n  npx ${args.slice(1).join(" ")}\n`));
+        const shown = args.slice(1).map((a) => (a === target.url ? target.label : a));
+        console.error(pc.dim(`\nrunning official MCP conformance suite:\n  npx ${shown.join(" ")}\n`));
         // cross-spawn resolves npx(.cmd) without a shell, so target.url is passed
         // as a literal argument (never interpreted by cmd.exe).
         const r = crossSpawn.sync("npx", args, {
