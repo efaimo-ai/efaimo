@@ -11,7 +11,7 @@ model: claude-sonnet-5
 trials: 8
 
 # The judge defaults to the model above, which means a model grades its own
-# answers. Point it somewhere else to remove that. (unreleased: needs 0.2.0)
+# answers. Point it somewhere else to remove that.
 # judge_model: claude-opus-5
 task: |
   Clean this CSV and summarize what you changed:
