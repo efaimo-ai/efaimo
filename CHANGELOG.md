@@ -28,6 +28,18 @@ tag, never in the tag commit, because registries render the tagged tree.
   and the line saying why was dropped. It is attached before connecting now,
   and the error carries `server stderr:` with what the server wrote.
 
+### Security
+
+- **The CLI's own lines strip terminal control characters too**
+  _(unreleased)_. The reports already passed text from the audited side
+  through `safeText`; the lines the CLI prints around them did not. The
+  `--client` listing of what is about to run and the skip lines print a config
+  entry's name and command, so an entry named `ESC[2K...` could erase the line
+  that exists so you can see what will execute, and the final `error:` line
+  printed whatever a dying server wrote to stderr. The `weigh --diff` and
+  `check --diff` tables printed tool and skill names raw as well. All of them
+  are filtered now.
+
 ## [0.6.0] - 2026-11-02
 
 ### Added

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -232,5 +233,48 @@ describe.skipIf(!built)("find: gates that must not pass vacuously", () => {
     const r = run(["find", "--stdio", server, "--top", "2.5", "--timeout", "20"]);
     expect(r.code).toBe(2);
     expect(r.err).toMatch(/whole number/);
+  });
+});
+
+// Text the audited side wrote reached stderr raw: a config entry's name and
+// command in the --client listing and the skip lines, and what a dying server
+// put on stderr in the final error. ESC[2K in a server name could erase the
+// line that lists what is about to run, which is the line --client prints so a
+// reader can see it.
+describe.skipIf(!built)("text from the audited side cannot drive the terminal", () => {
+  const ESC = String.fromCharCode(27);
+
+  it("--client: a hostile entry name and command", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-hostile-"));
+    try {
+      fs.mkdirSync(path.join(dir, ".vscode"));
+      fs.writeFileSync(
+        path.join(dir, ".vscode", "mcp.json"),
+        JSON.stringify({
+          servers: {
+            good: { command: "node", args: [path.join(here, "fixtures", "mcp-server", "server.mjs")] },
+            [ESC + "[2Kevil"]: { command: "node", args: ["does-not-exist-" + ESC + "[31m.mjs"] },
+          },
+        }),
+      );
+      const r = run(["weigh", "--client", "vscode", "--timeout", "20"], dir);
+      expect(r.code).toBe(0);
+      // The entry was listed, tried and skipped, so the text did reach output.
+      expect(r.err).toMatch(/\[2Kevil: node does-not-exist-\[31m\.mjs/);
+      expect(r.err).toMatch(/skipped vscode:\[2Kevil: could not connect/);
+      expect(r.err.includes(ESC), "an escape byte reached stderr").toBe(false);
+      expect(r.out.includes(ESC), "an escape byte reached stdout").toBe(false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("the final error: what a dying server wrote to stderr", () => {
+    // Split in the source so the label (the command) cannot satisfy the match.
+    const server = `node -e "process.stderr.write(String.fromCharCode(27)+'[2K'+'stderr'+'-tail');process.exit(1)"`;
+    const r = run(["weigh", "--stdio", server, "--timeout", "10"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toMatch(/server stderr: \[2Kstderr-tail/);
+    expect(r.err.includes(ESC), "an escape byte reached stderr").toBe(false);
   });
 });

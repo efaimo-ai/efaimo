@@ -456,7 +456,7 @@ export function renderDiffPretty(d: WeighDiff, opts: { maxTokens?: number; allow
   for (const t of d.toolChanges.slice(0, 10)) {
     const b = t.before === undefined ? "added" : n(t.before);
     const a = t.after === undefined ? "removed" : n(t.after);
-    lines.push(`  ${t.name.padEnd(28)} ${b} -> ${a}`);
+    lines.push(`  ${cell(t.name).padEnd(28)} ${b} -> ${a}`);
   }
   if (opts.maxTokens !== undefined && d.after > opts.maxTokens) {
     lines.push(paint(pc.red, `budget exceeded: ${n(d.after)} > --max-tokens ${n(opts.maxTokens)}`));
@@ -503,7 +503,7 @@ export function renderCheckDiffPretty(d: CheckDiffResult): string {
     lines.push(`  ${paint(pc.yellow, "unattributable")}: the ruleset changed between the runs, so a moved grade may be the ruler`);
   }
   const g = (m: { name: string; before: { score: number; letter: string }; after: { score: number; letter: string } }) =>
-    `  ${m.name.padEnd(34)} ${m.before.letter} (${m.before.score}) -> ${m.after.letter} (${m.after.score})`;
+    `  ${cell(m.name).padEnd(34)} ${m.before.letter} (${m.before.score}) -> ${m.after.letter} (${m.after.score})`;
   for (const m of d.improved) lines.push(paint(pc.green, g(m)));
   for (const m of d.worsened) lines.push(paint(pc.red, g(m)));
   lines.push(
@@ -522,7 +522,7 @@ export function renderCheckDiffPretty(d: CheckDiffResult): string {
         lines.push(
           paint(
             pc.dim,
-            `              ${c.dominatedBy.name} is ${c.dominatedBy.shareOfMovement.toFixed(1)}% of that movement (${sign(c.dominatedBy.delta)}); the total describes it, not the rest`,
+            `              ${cell(c.dominatedBy.name)} is ${c.dominatedBy.shareOfMovement.toFixed(1)}% of that movement (${sign(c.dominatedBy.delta)}); the total describes it, not the rest`,
           ),
         );
       }

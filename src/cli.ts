@@ -36,6 +36,7 @@ import { toJsonEnvelope } from "./reporters/json.js";
 import { renderCheckMarkdown, renderDiffMarkdown, renderFindMarkdown, renderSkillSetMarkdown, renderWeighMarkdown } from "./reporters/markdown.js";
 import { gradeBadgeSpec, makeBadgeSvg, toShieldsEndpoint, weighBadgeSpec } from "./reporters/badge.js";
 import { loadDotEnv } from "./util/dotenv.js";
+import { safeText } from "./util/safeText.js";
 import type { CheckReport, ServerWeighResult, WeighResult, ToolDef} from "./core/types.js";
 
 // Load a local .env before any command reads a key. Shell env always wins.
@@ -88,7 +89,7 @@ function windowSetup(opts: { window?: string }): void {
 }
 
 function fail(message: string): never {
-  console.error(pc.red(`error: ${message}`));
+  console.error(pc.red(`error: ${safeText(message)}`));
   process.exit(2);
 }
 
@@ -217,7 +218,7 @@ program
           t.kind === "stdio"
             ? [t.command, ...t.args].join(" ") + (t.env && Object.keys(t.env).length ? `   (+${Object.keys(t.env).length} env)` : "")
             : t.url;
-        console.error(pc.dim(`  ${e.name}: ${shown}`));
+        console.error(pc.dim(safeText(`  ${e.name}: ${shown}`)));
       }
       if (conf.fromCwd.length) {
         console.error(
@@ -253,7 +254,7 @@ program
           `"${target.label}" is a source directory; weigh needs a live server (stdio command or URL) or a skill path. For repo checks use: efaimo check --mcp ${target.label}`,
         );
       } else {
-        console.error(pc.dim(`connecting to ${target.label} ...`));
+        console.error(pc.dim(safeText(`connecting to ${target.label} ...`)));
         try {
           const intro = await introspectServer(target, { timeoutMs });
           results.push(await weighServer(intro, { anthropicApiKey: anthropic.apiKey, anthropicModel: anthropic.model }));
@@ -263,7 +264,7 @@ program
           if (targets.length === 1) throw e;
           const reason = (e instanceof Error ? e.message : String(e)).split("\n")[0]!.trim();
           skipped.push({ label: target.label, reason });
-          console.error(pc.yellow(`skipped ${target.label}: ${reason}`));
+          console.error(pc.yellow(safeText(`skipped ${target.label}: ${reason}`)));
         }
       }
     }
@@ -318,7 +319,7 @@ program
     if (skipped.length) {
       console.error(
         pc.yellow(
-          `weighed ${results.length} of ${targets.length} servers; skipped: ${skipped.map((s) => s.label).join(", ")}`,
+          safeText(`weighed ${results.length} of ${targets.length} servers; skipped: ${skipped.map((s) => s.label).join(", ")}`),
         ),
       );
     }
@@ -766,6 +767,6 @@ program
   });
 
 program.parseAsync(process.argv).catch((e: unknown) => {
-  console.error(pc.red(`error: ${e instanceof Error ? e.message : String(e)}`));
+  console.error(pc.red(`error: ${safeText(e instanceof Error ? e.message : String(e))}`));
   process.exitCode = 2;
 });

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { ToolDef } from "../src/core/types.js";
 import { analyzeFind } from "../src/find/find.js";
 import { runFindRules } from "../src/core/engine.js";
-import { renderFindPretty, renderFindFindingsPretty, setColor } from "../src/reporters/pretty.js";
+import { renderCheckDiffPretty, renderDiffPretty, renderFindPretty, renderFindFindingsPretty, setColor } from "../src/reporters/pretty.js";
 import { renderFindMarkdown } from "../src/reporters/markdown.js";
 import { tokenize, MAX_FIELD_CHARS } from "../src/find/tokenize.js";
 
@@ -185,5 +185,56 @@ describe("a hostile server cannot forge the report", () => {
     expect(rows).toHaveLength(2);
     expect([rows[0]!.rank, rows[1]!.rank].sort()).toEqual([1, 2]);
     expect(f.notes.join(" ")).toMatch(/more than one tool/);
+  });
+});
+
+describe("a hostile name cannot drive the terminal through a diff", () => {
+  // Both diff renderers printed tool and skill names raw, while every other
+  // table in pretty.ts went through `cell`. A server whose tool is named
+  // ESC[1A ESC[2K could erase the line above it in the CI log a --diff gate
+  // writes, and a skill can name itself the same way.
+  const ESC = String.fromCharCode(27);
+  const evil = ESC + "[1A" + ESC + "[2K evil";
+
+  it("weigh --diff", () => {
+    setColor(false);
+    const out = renderDiffPretty(
+      { before: 10, after: 20, delta: 10, pct: 100, toolChanges: [{ name: evil, before: 10, after: 20 }] },
+      {},
+    );
+    expect(out).toContain("evil");
+    expect(out.includes(ESC), "an escape byte reached the diff").toBe(false);
+  });
+
+  it("check --diff", () => {
+    setColor(false);
+    const out = renderCheckDiffPretty({
+      kind: "check",
+      versions: { before: "0.6.0", after: "0.6.0" },
+      rulesVersions: { before: "3", after: "3" },
+      rulesDrift: false,
+      paired: 1,
+      added: [],
+      removed: [],
+      improved: [],
+      worsened: [{ name: evil, before: { score: 90, letter: "A" }, after: { score: 70, letter: "C" } }],
+      held: 0,
+      findingCounts: { before: 0, after: 1 },
+      costs: [
+        {
+          column: "body",
+          when: "on trigger",
+          before: 10,
+          after: 30,
+          delta: 20,
+          pct: 200,
+          moved: [],
+          dominatedBy: { name: evil, delta: 20, shareOfMovement: 100 },
+        },
+      ],
+      notes: [],
+    });
+    expect(out.match(/evil/g)).toHaveLength(2);
+    expect(out.includes(ESC), "an escape byte reached the diff").toBe(false);
   });
 });
