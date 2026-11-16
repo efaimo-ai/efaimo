@@ -21,6 +21,20 @@ const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 // an instruction, not a file the skill loads.
 const BACKTICK_PATH_RE = /`([^`\s*]*\/[^`\s*]*\.(?:md|txt|py|js|ts|mjs|json|yaml|yml|sh|csv|html))`/g;
 
+/** The real path, or undefined. `.native`: the JS version throws EISDIR on a `\\?\` path. */
+function realPath(p: string): string | undefined {
+  try {
+    return fs.realpathSync.native(p);
+  } catch {
+    return undefined;
+  }
+}
+
+function isInside(dir: string, p: string): boolean {
+  const rel = path.relative(dir, p);
+  return !(rel.startsWith("..") || path.isAbsolute(rel));
+}
+
 export function parseSkillFile(file: string): SkillInfo {
   const dir = path.dirname(file);
   const base: SkillInfo = {
@@ -33,6 +47,12 @@ export function parseSkillFile(file: string): SkillInfo {
     referencedPaths: [],
     files: [],
   };
+  // SKILL.md can itself be a link out of the skill, and reading it read
+  // whatever it pointed at. Same test as for the references below.
+  const realFile = realPath(file);
+  if (realFile === undefined ? fs.existsSync(file) : !isInside(realPath(dir) ?? dir, realFile)) {
+    return { ...base, parseError: "SKILL.md leads outside the skill through a symbolic link; not read" };
+  }
   let raw: string;
   try {
     // Capped, like the referenced files this same module already caps at 512KB
@@ -77,14 +97,7 @@ export function parseSkillFile(file: string): SkillInfo {
 
   // Real paths for the containment check below. Both sides are resolved, so a
   // skill reached through a link of its own still contains its own files.
-  const real = (p: string): string | undefined => {
-    try {
-      return fs.realpathSync(p);
-    } catch {
-      return undefined;
-    }
-  };
-  const realDir = real(dir) ?? dir;
+  const realDir = realPath(dir) ?? dir;
 
   const seen = new Set<string>();
   for (const [re, source] of [
@@ -123,9 +136,16 @@ export function parseSkillFile(file: string): SkillInfo {
       // The same question on real paths. A link (a junction on Windows) inside
       // the skill can point anywhere, and `references/notes.md` passed the
       // check above while the read landed in ~/.ssh.
-      const target = escapes ? undefined : real(resolved);
-      const realRel = target === undefined ? "" : path.relative(realDir, target);
-      const linksOut = realRel.startsWith("..") || path.isAbsolute(realRel);
+      // An entry that is there (lstat, so a dangling link counts) but has no
+      // real path leads out as far as this check knows: fail closed. Taking
+      // "no real path" as inside let a \\?\ path through, where realpathSync
+      // threw EISDIR.
+      const target = escapes ? undefined : realPath(resolved);
+      const linksOut =
+        !escapes &&
+        (target === undefined
+          ? fs.lstatSync(resolved, { throwIfNoEntry: false }) !== undefined
+          : !isInside(realDir, target));
       base.referencedPaths.push({
         raw: cleaned,
         resolved,

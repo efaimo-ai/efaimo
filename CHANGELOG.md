@@ -40,6 +40,22 @@ tag, never in the tag commit, because registries render the tagged tree.
   in the terminal and as escaped text in `--md`, where links and inline HTML in
   a note used to render.
 
+- **A link out of a skill is caught when the skill is named by a `\\?\` path**
+  _(unreleased)_. 0.6.1 decided containment on real paths, but Node's
+  `realpathSync` throws on a Windows extended-length path, a reference with no
+  real path counted as inside, and the link out was read. Real paths now come
+  from the native call, and a reference that is there but has no real path
+  (a dangling link among them) is treated as leading out. `weigh` asks where a
+  reference leads before whether it exists, so a link out to nothing gets the
+  same `not read:` note as a link out to something.
+
+- **A `SKILL.md` that is itself a link out of the skill is not read**
+  _(unreleased)_. Naming a skill directory read its `SKILL.md` wherever a
+  symbolic link put it. It now has to resolve inside the skill like any
+  reference; one that does not fails S101 with a parse error that says so. A
+  skill whose whole directory is reached through a link still reads, because
+  the file and the directory resolve together.
+
 ## [0.6.1] - 2026-11-16
 
 ### Added

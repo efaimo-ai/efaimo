@@ -97,13 +97,16 @@ export async function weighSkills(set: SkillSet): Promise<SkillSetWeighResult> {
     for (const ref of skill.referencedPaths) {
       // Never read outside the skill root. S106 warns about these, but only
       // after weigh had already opened the file and counted its tokens.
-      if (ref.escapes || !ref.exists || isBinaryPath(ref.resolved)) continue;
+      if (ref.escapes) continue;
       // Inside as written, outside once a link is followed. Said, because the
       // referenced total is smaller than what a host following the link loads.
+      // Asked before existence: whether a link out finds something at its end
+      // is not this skill's to say.
       if (ref.linksOut) {
         linkNotes.push(`not read: "${ref.raw}" in ${name} leads outside the skill through a symbolic link`);
         continue;
       }
+      if (!ref.exists || isBinaryPath(ref.resolved)) continue;
       const text = readTextSafe(ref.resolved);
       if (text === undefined) continue;
       refFileCount++;

@@ -429,6 +429,76 @@ describe("links that lead out of a skill", () => {
     }
   });
 
+  it.skipIf(process.platform !== "win32")("still sees the link when the skill is named by a \\\\?\\ path", async () => {
+    // realpathSync throws EISDIR on an extended-length path. The real path
+    // came back undefined, an undefined real path counted as inside, and the
+    // link out was read.
+    const { root, skill } = layout();
+    try {
+      const set = findSkills("\\\\?\\" + skill);
+      const refs = Object.fromEntries(set.skills[0]!.referencedPaths.map((r) => [r.raw, r]));
+      expect(refs["references/out/secret.md"]).toMatchObject({ exists: true, escapes: false, linksOut: true });
+      expect(refs["references/in/inner.md"]!.linksOut).toBeUndefined();
+      expect((await weighSkills(set)).perSkill[0]!.refFileCount).toBe(1);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("says a link out leads out even when nothing is at its end", async () => {
+    // A dangling link has no real path, and no real path counted as inside;
+    // weigh then dropped it as missing before asking where it leads.
+    const { root, skill } = layout();
+    try {
+      fs.symlinkSync(path.join(root, "gone"), path.join(skill, "references", "gone"), "junction");
+      fs.appendFileSync(path.join(skill, "SKILL.md"), "And [gone](references/gone).\n");
+      const set = findSkills(skill);
+      const gone = set.skills[0]!.referencedPaths.find((r) => r.raw === "references/gone");
+      expect(gone).toMatchObject({ exists: false, linksOut: true });
+      expect((await weighSkills(set)).notes.join("\n")).toMatch(/not read: "references\/gone" .*symbolic link/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reads a skill whose own directory is reached through a link", () => {
+    // The layout `.claude/skills/<name>` -> a shared skills folder: SKILL.md
+    // and the directory resolve together, so the file is inside.
+    const { root, skill } = layout();
+    try {
+      const via = path.join(root, "via");
+      fs.symlinkSync(skill, via, "junction");
+      const s = findSkills(via).skills[0]!;
+      expect(s.parseError).toBeUndefined();
+      expect(s.name).toBe("linked");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not read a SKILL.md that is itself a link out of the skill", (ctx) => {
+    const { root, skill } = layout();
+    try {
+      const outsideSkill = path.join(root, "outside", "SKILL.md");
+      fs.writeFileSync(outsideSkill, "---\nname: elsewhere\ndescription: Not this skill's file.\n---\nsecret body\n");
+      fs.rmSync(path.join(skill, "SKILL.md"));
+      try {
+        fs.symlinkSync(outsideSkill, path.join(skill, "SKILL.md"), "file");
+      } catch (e) {
+        // A file link needs a privilege on Windows that a test run may lack,
+        // and a junction cannot point at a file.
+        if ((e as NodeJS.ErrnoException).code === "EPERM") return ctx.skip("cannot create a file symlink here");
+        throw e;
+      }
+      const s = findSkills(skill).skills[0]!;
+      expect(s.parseError).toMatch(/outside the skill/);
+      expect(s.body).toBe("");
+      expect(s.name).toBeUndefined();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("never walks into a linked directory", () => {
     // A pin, not a fix: readdir's Dirent reports a link as neither a file nor a
     // directory, so walkFiles has always skipped links rather than followed them.
