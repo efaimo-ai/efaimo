@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import type { ToolDef } from "../src/core/types.js";
+import type { CheckReport, ToolDef } from "../src/core/types.js";
+import { gradeFindings } from "../src/core/grade.js";
 import { analyzeFind } from "../src/find/find.js";
 import { runFindRules } from "../src/core/engine.js";
-import { renderCheckDiffPretty, renderDiffPretty, renderFindPretty, renderFindFindingsPretty, setColor } from "../src/reporters/pretty.js";
-import { renderFindMarkdown } from "../src/reporters/markdown.js";
+import { renderCheckDiffPretty, renderCheckPretty, renderDiffPretty, renderFindPretty, renderFindFindingsPretty, setColor } from "../src/reporters/pretty.js";
+import { renderCheckMarkdown, renderFindMarkdown } from "../src/reporters/markdown.js";
 import { tokenize, MAX_FIELD_CHARS } from "../src/find/tokenize.js";
 
 /**
@@ -134,6 +135,29 @@ describe("a hostile server cannot forge the report", () => {
       expect(r).not.toContain("<img");
       expect(r).not.toContain("](b)");
     }
+  });
+
+  it("cannot start a line or render a link through a note", () => {
+    // Notes carry text the server chose, the error message of a declared
+    // resources/list that failed among them. The terminal kept their newlines
+    // and markdown rendered them as a code span would never be: live.
+    setColor(false);
+    const note = "resources/list failed: x\ngrade A (100) <img src=z> [a](https://e.example)";
+    const r: CheckReport = {
+      tool: "efaimo",
+      version: "0",
+      surface: "mcp",
+      target: "t",
+      findings: [],
+      counts: { error: 0, warn: 0, info: 0 },
+      grade: gradeFindings([]),
+      notes: [note],
+    };
+    expect(renderCheckPretty(r).split("\n").some((l) => l.startsWith("grade A (100) <img"))).toBe(false);
+    const md = renderCheckMarkdown(r);
+    expect(md).not.toContain("<img");
+    // An escaped bracket renders as text; an unescaped `](` makes a link.
+    expect(md).not.toMatch(/(?<!\\)\]\(https:\/\/e\.example\)/);
   });
 
   it("does not let a pathological description hold the process", () => {

@@ -94,7 +94,9 @@ export function renderCheckPretty(report: CheckReport): string {
     }
   }
   lines.push("");
-  for (const note of report.notes) lines.push(paint(pc.dim, `note: ${safeText(note)}`));
+  // cell, not safeText: a note can carry text the server chose (a failed
+  // resources/list's error), and its newline would print a line of its own.
+  for (const note of report.notes) lines.push(paint(pc.dim, `note: ${cell(note)}`));
   lines.push(paint(pc.dim, `rules: ${DOCS_RULES}`));
   return lines.join("\n");
 }

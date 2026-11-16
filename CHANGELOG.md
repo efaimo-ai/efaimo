@@ -10,6 +10,20 @@ Everything in this section is **(unreleased)**: it exists on `main` and not in
 what `npx efaimo` installs. These annotations come off in the commit BEFORE the
 tag, never in the tag commit, because registries render the tagged tree.
 
+### Security
+
+- **A server that connected keeps its stderr out of the report**
+  _(unreleased)_. 0.6.1 attached the stderr listener before the handshake so
+  that a failed one could say why, and the success path went on adding the
+  first 300 characters of what the server wrote to the report's notes. A key,
+  token or URL a server logs at startup then went out in the terminal, `--out`,
+  `--md` and `--json`, and its newlines let it print lines of its own, a second
+  `grade A (100)` among them. A server that connects is no longer quoted at
+  all. A failed handshake still carries `server stderr:`, now on one line, with
+  its URLs redacted and its control characters removed. Notes print on one line
+  in the terminal and as escaped text in `--md`, where links and inline HTML in
+  a note used to render.
+
 ## [0.6.1] - 2026-11-16
 
 ### Added

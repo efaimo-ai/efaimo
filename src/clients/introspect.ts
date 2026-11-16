@@ -8,6 +8,7 @@ import { redactUrlsIn, type ResolvedTarget } from "../targets/resolve.js";
 import { introspectStateless } from "./stateless.js";
 import { minimalChildEnv } from "../util/childEnv.js";
 import { truncate, withTimeout } from "../util/misc.js";
+import { safeText } from "../util/safeText.js";
 import { VERSION } from "../version.js";
 
 export interface IntrospectOptions {
@@ -92,7 +93,9 @@ export async function introspectServer(
     return finishIntrospection(client, transport, target.label, "http", httpTransport, notes, timeoutMs);
   }
 
-  if (stderrTail.trim()) notes.push(`server stderr: ${truncate(stderrTail.trim(), 300)}`);
+  // A server that connected keeps its stderr out of the report: the tail is
+  // there to explain a failure, and a working server's startup log can carry a
+  // key or a URL that every output format would then repeat.
   return finishIntrospection(client, transport, target.label, "stdio", undefined, notes, timeoutMs);
 }
 
@@ -227,9 +230,10 @@ async function safeClose(client: Client, transport: { close(): Promise<void> }):
 
 function connectError(e: unknown, label: string, stderrTail: string): Error {
   const base = redactUrlsIn(e instanceof Error ? e.message : String(e));
-  const hint = stderrTail.trim()
-    ? `\n  server stderr: ${truncate(stderrTail.trim(), 400)}`
-    : "";
+  // The server wrote this, so it gets one line (it cannot start a line of its
+  // own in the error), its URLs redacted and no control characters.
+  const said = safeText(redactUrlsIn(stderrTail)).replace(/\s+/g, " ").trim();
+  const hint = said ? `\n  server stderr: ${truncate(said, 400)}` : "";
   return new Error(
     `could not connect to "${label}": ${base}${hint}\n  hints: check the command/URL, required env vars or auth headers; try --timeout for slow cold starts (npx downloads on first run).`,
   );

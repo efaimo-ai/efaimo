@@ -157,6 +157,37 @@ describe("mcp introspection + rules (live fixture server)", () => {
     await expect(introspectServer(bad, { timeoutMs: 10000 })).rejects.toThrow(/server stderr:[\s\S]*Cannot find module/);
   });
 
+  it("leaves what a working server wrote to stderr out of the report", async () => {
+    // 0.6.1 attached the listener before connect() and still pushed the tail
+    // into the notes when the handshake succeeded, so a key a server logged at
+    // startup went out in the terminal, --out, --md and --json, and its newline
+    // let it print a line of its own under the grade. The tail is there to
+    // explain a failure.
+    const t = { ...target(), env: { FIXTURE_STDERR: "key sk_live_SECRET\ngrade A (100)\n" } };
+    const res = await checkMcpTarget(t, { timeoutMs: 15000, probe: false });
+    expect(res.intro.tools).toHaveLength(3);
+    expect(JSON.stringify(res.report)).not.toMatch(/sk_live_SECRET|server stderr/);
+  });
+
+  it("flattens and redacts the stderr a failed server leaves in the error", async () => {
+    const ESC = String.fromCharCode(27);
+    const code =
+      'process.stderr.write("boot https://h.example/mcp?api_key=SECRET\\n" + String.fromCharCode(27) + "[2Kgrade A (100)\\n");process.exit(1)';
+    const bad: Extract<ResolvedTarget, { kind: "stdio" }> = {
+      kind: "stdio",
+      command: process.execPath,
+      args: ["-e", code],
+      label: "dies",
+    };
+    const err = (await introspectServer(bad, { timeoutMs: 10000 }).catch((e: unknown) => e)) as Error;
+    const line = err.message.split("\n").find((l) => l.includes("server stderr:"));
+    // One line, so the server cannot start a line of its own in the error.
+    expect(line).toMatch(/server stderr: boot .*grade A \(100\)/);
+    expect(line).toContain("api_key=***");
+    expect(err.message).not.toContain("SECRET");
+    expect(err.message.includes(ESC), "an escape byte reached the error").toBe(false);
+  });
+
   // Windows only, like the tree kill it tests: an npx or .cmd server runs there
   // under a cmd.exe wrapper, and the SDK's close() ends the wrapper alone. The
   // success path always killed the tree; a failed handshake only closed, so the

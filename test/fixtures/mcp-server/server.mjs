@@ -5,6 +5,9 @@
 // tool) so the check rules have something to find. No SDK dependency.
 import readline from "node:readline";
 
+// Many servers log a banner at startup, and some put a URL or a key in it.
+if (process.env.FIXTURE_STDERR) process.stderr.write(process.env.FIXTURE_STDERR);
+
 const TOOLS = [
   {
     name: "add",
