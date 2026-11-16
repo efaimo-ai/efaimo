@@ -188,6 +188,37 @@ describe("mcp introspection + rules (live fixture server)", () => {
     expect(err.message.includes(ESC), "an escape byte reached the error").toBe(false);
   });
 
+  /** The error a stdio server that writes `stderr` and exits fails with. */
+  async function errorFrom(stderr: string): Promise<Error> {
+    const bad: Extract<ResolvedTarget, { kind: "stdio" }> = {
+      kind: "stdio",
+      command: process.execPath,
+      args: ["-e", `process.stderr.write(${JSON.stringify(stderr)});process.exit(1)`],
+      label: "dies",
+    };
+    return (await introspectServer(bad, { timeoutMs: 10000 }).catch((e: unknown) => e)) as Error;
+  }
+
+  it("keeps the end of a long stderr, where a traceback names its cause", async () => {
+    // The hint kept the first 400 characters of the first 2048, and a Python
+    // traceback prints the line that says what went wrong last. The head stays
+    // too, because Node prints its reason first (the test above).
+    const err = await errorFrom(
+      "Traceback (most recent call last):\n" + '  File "x.py", line 1, in <module>\n'.repeat(80) + "ValueError: the real cause\n",
+    );
+    expect(err.message).toMatch(/server stderr: Traceback .* \.\.\. .*ValueError: the real cause/);
+  });
+
+  it("does not leave half a URL unredacted where the kept tail begins", async () => {
+    // 20 characters past 2048, so the cut falls inside the URL, after the
+    // https:// that redaction looks for.
+    const url = "https://h.example/mcp?api_key=SECRET";
+    const end = "ValueError: the cause";
+    const err = await errorFrom(url + " ".repeat(2048 + 20 - url.length - end.length) + end);
+    expect(err.message).toContain(end);
+    expect(err.message).not.toContain("SECRET");
+  });
+
   // Windows only, like the tree kill it tests: an npx or .cmd server runs there
   // under a cmd.exe wrapper, and the SDK's close() ends the wrapper alone. The
   // success path always killed the tree; a failed handshake only closed, so the

@@ -7,7 +7,7 @@ import type { ServerIntrospection, ToolDef, ResourceDef, PromptDef } from "../co
 import { redactUrlsIn, type ResolvedTarget } from "../targets/resolve.js";
 import { introspectStateless } from "./stateless.js";
 import { minimalChildEnv } from "../util/childEnv.js";
-import { truncate, withTimeout } from "../util/misc.js";
+import { withTimeout } from "../util/misc.js";
 import { safeText } from "../util/safeText.js";
 import { VERSION } from "../version.js";
 
@@ -23,7 +23,9 @@ export async function introspectServer(
 ): Promise<ServerIntrospection> {
   const timeoutMs = opts.timeoutMs ?? 45000;
   const notes: string[] = [];
+  let stderrHead = "";
   let stderrTail = "";
+  let stderrCut = false;
 
   let transport: InstanceType<typeof StdioClientTransport> | InstanceType<typeof StreamableHTTPClientTransport> | InstanceType<typeof SSEClientTransport>;
   let httpTransport: ServerIntrospection["httpTransport"];
@@ -42,8 +44,17 @@ export async function introspectServer(
     // construction, and a server that dies during the handshake has written
     // its reason by the time connect() rejects. Attached after, it was lost.
     const errStream = (stdio as unknown as { stderr?: NodeJS.ReadableStream }).stderr;
+    // Both ends are kept: Node prints why it failed first and a Python
+    // traceback prints it last. A cut drops the partial token it lands in, so
+    // half a URL, past the https:// that redaction looks for, is never kept.
     errStream?.on("data", (chunk: Buffer) => {
-      if (stderrTail.length < 2048) stderrTail += chunk.toString("utf8");
+      const s = chunk.toString("utf8");
+      if (stderrHead.length < 2048) stderrHead += s;
+      stderrTail += s;
+      if (stderrTail.length > 2048) {
+        stderrTail = stderrTail.slice(-2048).replace(/^\S*/, "");
+        stderrCut = true;
+      }
     });
     // Split the budget across the two attempts so a dead server fails in about
     // one timeout, not two: the legacy handshake got the whole timeout AND the
@@ -61,7 +72,8 @@ export async function introspectServer(
       const remaining = Math.max(timeoutMs - (Date.now() - startedAt), Math.round(timeoutMs * 0.25));
       const rc = await introspectStateless(target, { timeoutMs: remaining });
       if (rc) return rc;
-      throw connectError(e, target.label, stderrTail);
+      const said = stderrCut ? `${stderrHead.slice(0, 2048).replace(/\S*$/, "")} ... ${stderrTail}` : stderrTail;
+      throw connectError(e, target.label, said);
     }
   } else {
     const url = new URL(target.url);
@@ -228,12 +240,14 @@ async function safeClose(client: Client, transport: { close(): Promise<void> }):
   }
 }
 
-function connectError(e: unknown, label: string, stderrTail: string): Error {
+function connectError(e: unknown, label: string, stderr: string): Error {
   const base = redactUrlsIn(e instanceof Error ? e.message : String(e));
   // The server wrote this, so it gets one line (it cannot start a line of its
   // own in the error), its URLs redacted and no control characters.
-  const said = safeText(redactUrlsIn(stderrTail)).replace(/\s+/g, " ").trim();
-  const hint = said ? `\n  server stderr: ${truncate(said, 400)}` : "";
+  const said = safeText(redactUrlsIn(stderr)).replace(/\s+/g, " ").trim();
+  // Cut after redaction, so a cut cannot reopen a URL.
+  const shown = said.length > 400 ? `${said.slice(0, 160)} ... ${said.slice(-235)}` : said;
+  const hint = shown ? `\n  server stderr: ${shown}` : "";
   return new Error(
     `could not connect to "${label}": ${base}${hint}\n  hints: check the command/URL, required env vars or auth headers; try --timeout for slow cold starts (npx downloads on first run).`,
   );

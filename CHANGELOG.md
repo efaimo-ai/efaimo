@@ -10,6 +10,14 @@ Everything in this section is **(unreleased)**: it exists on `main` and not in
 what `npx efaimo` installs. These annotations come off in the commit BEFORE the
 tag, never in the tag commit, because registries render the tagged tree.
 
+### Fixed
+
+- **A failed server's `server stderr:` keeps the end of what it wrote**
+  _(unreleased)_. The hint kept the first 400 characters of the first 2 KB,
+  and a Python traceback prints the line that says what went wrong last, so a
+  long one lost exactly that line. The hint now shows the start and the end
+  with ` ... ` between them, because Node prints its reason first.
+
 ### Security
 
 - **A server that connected keeps its stderr out of the report**
