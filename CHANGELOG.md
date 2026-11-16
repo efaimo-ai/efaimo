@@ -4,6 +4,12 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] 0.6.2
+
+Everything in this section is **(unreleased)**: it exists on `main` and not in
+what `npx efaimo` installs. These annotations come off in the commit BEFORE the
+tag, never in the tag commit, because registries render the tagged tree.
+
 ## [0.6.1] - 2026-11-16
 
 ### Added
