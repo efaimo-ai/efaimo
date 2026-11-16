@@ -136,5 +136,28 @@ jobs:
           done
           echo "registry.npmjs.org still does not serve efaimo@$ver after 5 minutes"
           exit 1
-      - run: $RUNNER_TEMP/mcp-publisher login github-oidc
-      - run: $RUNNER_TEMP/mcp-publisher publish
+      # The registry takes each version once, so re-running this job after it
+      # succeeded (to finish a failed later step, say) would fail at publish.
+      # A version already listed ends the job green instead.
+      - name: is this version listed already
+        id: listed
+        run: |
+          set -euo pipefail
+          export VER="$(node -p "require('./package.json').version")"
+          export NAME="$(node -p "require('./server.json').name")"
+          curl -fsS --get --data-urlencode "search=$NAME" "https://registry.modelcontextprotocol.io/v0/servers" -o "$RUNNER_TEMP/listed.json"
+          if node -e '
+            const body = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const hit = (body.servers ?? []).some((s) => {
+              const v = s.server ?? s;
+              return v.name === process.env.NAME && v.version === process.env.VER;
+            });
+            process.exit(hit ? 0 : 1);
+          ' "$RUNNER_TEMP/listed.json"; then
+            echo "$NAME $VER is already in the MCP Registry; nothing to publish"
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.listed.outputs.done != 'true'
+        run: $RUNNER_TEMP/mcp-publisher login github-oidc
+      - if: steps.listed.outputs.done != 'true'
+        run: $RUNNER_TEMP/mcp-publisher publish
