@@ -44,6 +44,12 @@ tag, never in the tag commit, because registries render the tagged tree.
   whatever files the runner's working directory held. The step now turns
   globbing off first, and a `*` reaches efaimo as typed.
 
+- **`check --repo` reads `package.json` the way it reads the Python
+  manifests** _(unreleased)_. `pyproject.toml` and the requirements files were
+  read through the 64 KB cap that also refuses anything but a regular file,
+  and `package.json` went through a plain read with neither. It takes the same
+  path now, so a `package.json` over 64 KB no longer names an SDK.
+
 ### Security
 
 - **A server that connected keeps its stderr out of the report**

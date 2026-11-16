@@ -52,6 +52,22 @@ describe("repo scan", () => {
     }
   });
 
+  it("reads package.json through the same 64 KB cap as the Python manifests", () => {
+    // package.json went through a plain readFileSync with no cap and no
+    // regular-file check, beside manifests that had both. Past the cap the
+    // JSON is cut short and does not parse, so nothing is detected from it.
+    const pkg = JSON.stringify({
+      dependencies: { "@modelcontextprotocol/sdk": "^1.0.0" },
+      description: "x".repeat(100 * 1024),
+    });
+    const dir = tempRepo({ "package.json": pkg });
+    try {
+      expect(scanRepo(dir).sdk ?? []).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("detects the mcp 2.x (RC) generation from a version specifier", () => {
     const dir = tempRepo({ "requirements.txt": "mcp>=2.0.0\n" });
     try {
