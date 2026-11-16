@@ -173,9 +173,12 @@ export function diffCheck(before: CheckEnvelope, after: CheckEnvelope, opts: Che
     ["before", before],
     ["after", after],
   ] as const) {
-    if (env.tool !== "efaimo") {
+    // A file holding `null`, a number or a list parses, and then has no fields.
+    const isObject = env !== null && typeof env === "object" && !Array.isArray(env);
+    if (!isObject || env.tool !== "efaimo") {
+      const what = isObject ? `its "tool" field is ${JSON.stringify(env.tool)}` : `it holds ${env === null ? "null" : Array.isArray(env) ? "a list" : `a ${typeof env}`}`;
       throw new CheckDiffRefused(
-        `the ${label} file is not an efaimo report (its "tool" field is ${JSON.stringify(env.tool)}); diff compares two runs of this tool, so pass JSON produced by --json`,
+        `the ${label} file is not an efaimo report (${what}); diff compares two runs of this tool, so pass JSON produced by --json`,
       );
     }
   }

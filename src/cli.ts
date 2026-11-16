@@ -283,10 +283,31 @@ program
       0,
     );
 
-    // Read before --out writes: both may name one file (compare with the last
-    // run, then keep this one), and reading after the write compared the run
-    // with itself.
-    const baselineText = opts.diff ? fs.readFileSync(opts.diff, "utf8") : undefined;
+    // Read, parsed and checked before --out writes: both may name one file
+    // (compare with the last run, then keep this one). Reading after the write
+    // compared the run with itself, and refusing a broken baseline after it
+    // overwrote that baseline with the run it was to be compared with.
+    let baseline: ServerWeighResult | undefined;
+    if (opts.diff) {
+      if (!single || single.kind !== "mcp") fail("--diff works on a single MCP server result");
+      let raw: unknown;
+      try {
+        raw = JSON.parse(fs.readFileSync(opts.diff, "utf8"));
+      } catch (e) {
+        fail(`could not read the baseline "${opts.diff}": ${(e as Error).message}`);
+      }
+      const env = raw as { data?: unknown } | null;
+      const data = (env !== null && typeof env === "object" && env.data ? env.data : env) as ServerWeighResult | null;
+      // A skill weigh baseline also carries a `totals` object, so a bare
+      // truthiness check passed it through and diffServerWeigh then died on the
+      // missing tool array with a raw TypeError. A server baseline is the one
+      // whose totals hold the three serializations; require the Claude-style
+      // total specifically so a skill baseline is rejected with a clear message.
+      if (typeof data?.totals?.claudeStyle !== "number") {
+        fail(`"${opts.diff}" is not an MCP server weigh baseline; write one with: efaimo weigh <server> --out ${opts.diff}`);
+      }
+      baseline = data;
+    }
 
     if (opts.out && single) {
       // Never stamped. A baseline exists to be compared against, so a field
@@ -330,19 +351,8 @@ program
       );
     }
 
-    if (baselineText !== undefined) {
-      if (!single || single.kind !== "mcp") fail("--diff works on a single MCP server result");
-      const baselineRaw = JSON.parse(baselineText) as { data?: ServerWeighResult } | ServerWeighResult;
-      const baseline = ("data" in baselineRaw && baselineRaw.data ? baselineRaw.data : baselineRaw) as ServerWeighResult;
-      // A skill weigh baseline also carries a `totals` object, so a bare
-      // truthiness check passed it through and diffServerWeigh then died on the
-      // missing tool array with a raw TypeError. A server baseline is the one
-      // whose totals hold the three serializations; require the Claude-style
-      // total specifically so a skill baseline is rejected with a clear message.
-      if (!baseline?.totals || typeof baseline.totals.claudeStyle !== "number") {
-        fail(`"${opts.diff}" is not an MCP server weigh baseline; write one with: efaimo weigh <server> --out ${opts.diff}`);
-      }
-      const d = diffServerWeigh(baseline, single);
+    if (baseline !== undefined) {
+      const d = diffServerWeigh(baseline, single as ServerWeighResult);
       console.log("");
       console.log(opts.md ? renderDiffMarkdown(d) : renderDiffPretty(d, { maxTokens, allowIncreasePct }));
       if (
@@ -446,34 +456,36 @@ program
     // written rather than just its data, because the version and rulesVersion
     // in it are what make the later comparison trustworthy.
     const baselineAndDiff = (payload: unknown) => {
-      // Read before --out writes, as weigh does: both may name one file.
-      let baseline: CheckEnvelope | undefined;
+      // Read and compared before --out writes, as weigh does: both may name
+      // one file, and a baseline refused after the write was already gone.
+      let d: ReturnType<typeof diffCheck> | undefined;
       if (opts.diff) {
+        let baseline: CheckEnvelope;
         try {
           baseline = JSON.parse(fs.readFileSync(opts.diff, "utf8")) as CheckEnvelope;
         } catch (e) {
           fail(`could not read the baseline "${opts.diff}": ${(e as Error).message}`);
+        }
+        const current = JSON.parse(toJsonEnvelope("check", payload, { timestamp: false })) as CheckEnvelope;
+        try {
+          // A file holding `null` reaches diffCheck too, and is refused there.
+          d = diffCheck(baseline, current, { allowRulesDrift: opts.allowRulesDrift });
+        } catch (e) {
+          // Every refusal here is a comparison that would have produced a
+          // plausible number from incomparable inputs, so it stops rather than
+          // printing one.
+          if (e instanceof CheckDiffRefused) fail(e.message);
+          throw e;
         }
       }
       if (opts.out) {
         fs.writeFileSync(opts.out, toJsonEnvelope("check", payload, { timestamp: false }));
         console.error(pc.dim(`baseline written: ${opts.out}`));
       }
-      // Not `!baseline`: a file holding `null` must reach diffCheck and be refused.
-      if (baseline === undefined) return;
-      const current = JSON.parse(toJsonEnvelope("check", payload, { timestamp: false })) as CheckEnvelope;
-      try {
-        const d = diffCheck(baseline, current, { allowRulesDrift: opts.allowRulesDrift });
-        console.log("");
-        console.log(renderCheckDiffPretty(d));
-        if (opts.failOnRegression && d.worsened.length) process.exitCode = 1;
-      } catch (e) {
-        // Every refusal here is a comparison that would have produced a
-        // plausible number from incomparable inputs, so it stops rather than
-        // printing one.
-        if (e instanceof CheckDiffRefused) fail(e.message);
-        throw e;
-      }
+      if (d === undefined) return;
+      console.log("");
+      console.log(renderCheckDiffPretty(d));
+      if (opts.failOnRegression && d.worsened.length) process.exitCode = 1;
     };
 
     if (skillSet) {

@@ -26,6 +26,18 @@ tag, never in the tag commit, because registries render the tagged tree.
   running after efaimo had exited. Every server still running when the process
   exits is now killed on the way out, its whole tree on Windows.
 
+- **A baseline `--diff` refuses is still there afterwards** _(unreleased)_.
+  `weigh` read the `--diff` file before writing `--out` but parsed it after,
+  so `weigh --diff base.json --out base.json` with a broken `base.json` printed
+  the results, overwrote the file with this run and only then exited 2.
+  `check` compared after writing too, so a baseline it refused (another kind
+  of report, another ruleset) was already gone. Both commands now read, parse
+  and compare the baseline before they write or print anything, and a refusal
+  leaves the file as it was. In `weigh` that includes `--diff` on more than one
+  target or on a skill, which used to print the results first. A baseline file
+  holding `null` stopped either command with a raw `TypeError`; it is now
+  refused in words.
+
 ### Security
 
 - **A server that connected keeps its stderr out of the report**

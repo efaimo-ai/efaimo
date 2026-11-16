@@ -414,4 +414,41 @@ describe.skipIf(!built)("--out and --diff naming the same file", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  // weigh parsed the baseline only after it had printed the results and
+  // written --out, so a broken baseline named by both flags was overwritten by
+  // the run it should have been compared with, and the run still exited 2.
+  it("weigh refuses a broken baseline before it writes anything", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-ratchet-"));
+    const base = path.join(dir, "base.json");
+    try {
+      fs.writeFileSync(base, "{ not json");
+      const r = run(["weigh", "--stdio", server, "--out", base, "--diff", base, "--timeout", "20"]);
+      expect(r.code).toBe(2);
+      expect(r.err).toMatch(/could not read the baseline/);
+      expect(r.out).toBe("");
+      expect(fs.readFileSync(base, "utf8")).toBe("{ not json");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // A baseline file holding `null` died in both commands on a raw TypeError.
+  it.each([
+    ["weigh", ["weigh", "--stdio", server, "--timeout", "20"], /not an MCP server weigh baseline/],
+    ["check", ["check", "--skill", path.join(SKILLS, "good-skill")], /not an efaimo report/],
+  ] as const)("%s refuses a null baseline in words, and keeps it", (_name, args, refusal) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-ratchet-"));
+    const base = path.join(dir, "base.json");
+    try {
+      fs.writeFileSync(base, "null");
+      const r = run([...args, "--out", base, "--diff", base]);
+      expect(r.code).toBe(2);
+      expect(r.err).toMatch(refusal);
+      expect(r.err).not.toMatch(/TypeError/);
+      expect(fs.readFileSync(base, "utf8")).toBe("null");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
