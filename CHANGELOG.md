@@ -40,6 +40,23 @@ tag, never in the tag commit, because registries render the tagged tree.
   in the terminal and as escaped text in `--md`, where links and inline HTML in
   a note used to render.
 
+- **The masking of secrets in what efaimo prints has fewer gaps**
+  _(unreleased)_. A query key with no value (`?sk_live_x`) printed as
+  `?sk_live_x=`, so the key itself, often the secret, went out; it is now
+  `?***`. A fragment (`#access_token=...`) passed as typed; it is now dropped.
+  A stdio target's label was its command line as typed, and `mcp-remote` and
+  servers like it take the URL and an `Authorization: Bearer` header as
+  arguments, so both went into the report, `--out` and diffs; the label now
+  masks the URLs in it and the bearer token, and so do the `--client` listing
+  of a stdio entry and a failed server's `server stderr:`. A label with nothing
+  to mask is unchanged. A `check --diff` or `weigh --diff` baseline written
+  for a target whose label now changes (a URL with a bare key or a fragment, a
+  command with a URL secret or a bearer token in it) names it the old way and
+  will not pair with a new run; write it again. Still not masked: a secret in
+  a URL's path (`/mcp/<key>`), which cannot be told from a route, and any
+  other secret passed as an argument, such as `--api-key abc` or an
+  `X-API-Key` header.
+
 - **A link out of a skill is caught when the skill is named by a `\\?\` path**
   _(unreleased)_. 0.6.1 decided containment on real paths, but Node's
   `realpathSync` throws on a Windows extended-length path, a reference with no

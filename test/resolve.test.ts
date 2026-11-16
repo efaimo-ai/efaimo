@@ -50,8 +50,28 @@ describe("resolveTarget", () => {
   // The label is also how check --diff pairs a server with its baseline, so a
   // URL with nothing to hide must not be normalised into a different string.
   it("leaves a URL with nothing to hide exactly as typed", () => {
-    for (const url of ["https://mcp.example.com", "HTTP://Example.com:443/mcp", "https://mcp.example.com/mcp#frag"]) {
+    for (const url of ["https://mcp.example.com", "HTTP://Example.com:443/mcp", "https://mcp.example.com/mcp?"]) {
       expect(resolveTarget(url, {}).label).toBe(url);
     }
+  });
+
+  // A key with no `=` came out as `?sk_live_x=`, the key masked nothing, and a
+  // fragment, where an OAuth implicit flow puts its token, passed as typed.
+  it("masks a query key that carries no value, and drops the fragment", () => {
+    expect(redactUrl("https://h.example/mcp?sk_live_x")).toBe("https://h.example/mcp?***");
+    expect(redactUrl("https://h.example/mcp?sk_live_x&region=eu")).toBe("https://h.example/mcp?***&region=***");
+    expect(redactUrl("https://h.example/mcp#access_token=abc123")).toBe("https://h.example/mcp");
+  });
+
+  // A stdio label was the command as typed, and mcp-remote takes the URL and
+  // the auth header as arguments, so both went into the report, --out and diffs.
+  it("masks URLs and bearer tokens in a stdio label", () => {
+    const cmd = 'npx -y mcp-remote https://h.example/mcp?api_key=SECRET --header "Authorization: Bearer tok123"';
+    const shown = 'npx -y mcp-remote https://h.example/mcp?api_key=*** --header "Authorization: Bearer ***"';
+    expect(resolveTarget(cmd, {}).label).toBe(shown);
+    expect(resolveTarget(cmd, { forceStdio: true }).label).toBe(shown);
+    expect(resolveTarget(cmd, {})).toMatchObject({ kind: "stdio", args: expect.arrayContaining(["Authorization: Bearer tok123"]) });
+    // Nothing to hide, nothing changed, so a baseline still pairs.
+    expect(resolveTarget("npx -y some-server --port 3000", {}).label).toBe("npx -y some-server --port 3000");
   });
 });

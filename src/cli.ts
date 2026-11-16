@@ -4,7 +4,7 @@ import crossSpawn from "cross-spawn";
 import { Command } from "commander";
 import pc from "picocolors";
 import { VERSION } from "./version.js";
-import { redactUrl, resolveTarget, type ResolvedTarget } from "./targets/resolve.js";
+import { redactSecretsIn, redactUrl, resolveTarget, type ResolvedTarget } from "./targets/resolve.js";
 import { loadClientServers, SUPPORTED_CLIENTS } from "./targets/clientConfigs.js";
 import { introspectServer } from "./clients/introspect.js";
 import { SPEC_VERSION } from "./clients/rawprobe.js";
@@ -216,7 +216,8 @@ program
         const t = e.target;
         const shown =
           t.kind === "stdio"
-            ? [t.command, ...t.args].join(" ") + (t.env && Object.keys(t.env).length ? `   (+${Object.keys(t.env).length} env)` : "")
+            ? redactSecretsIn([t.command, ...t.args].join(" ")) +
+              (t.env && Object.keys(t.env).length ? `   (+${Object.keys(t.env).length} env)` : "")
             : redactUrl(t.url);
         console.error(pc.dim(safeText(`  ${e.name}: ${shown}`)));
       }

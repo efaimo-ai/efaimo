@@ -20,7 +20,7 @@ export function resolveTarget(input: string, opts: ResolveOptions = {}): Resolve
   if (opts.forceStdio) {
     const { command, args } = parseCommandString(input);
     if (!command) throw new Error(`empty stdio command: "${input}"`);
-    return { kind: "stdio", command, args, label: input, env: opts.env };
+    return { kind: "stdio", command, args, label: redactSecretsIn(input), env: opts.env };
   }
   if (/^https?:\/\//i.test(input)) {
     return { kind: "http", url: input, label: redactUrl(input), headers: opts.headers };
@@ -49,19 +49,22 @@ export function resolveTarget(input: string, opts: ResolveOptions = {}): Resolve
 
   const { command, args } = parseCommandString(input);
   if (!command) throw new Error(`cannot resolve target: "${input}"`);
-  return { kind: "stdio", command, args, label: input, env: opts.env };
+  return { kind: "stdio", command, args, label: redactSecretsIn(input), env: opts.env };
 }
 
 /**
  * A URL as it may be printed: the username, the password and every query value
- * become `***`.
+ * become `***`, a query key with no value becomes `***` itself, and the
+ * fragment goes.
  *
  * The label is what the report, an --out file and a diff all show, and a key
  * passed as `?api_key=` landed in all three verbatim. The username goes too,
- * because some hosts take a token there (`https://<token>@host/`). A URL with
- * none of them comes back exactly as typed, because the label is also how
- * check --diff pairs a server with its baseline, and normalising it would
- * orphan every baseline.
+ * because some hosts take a token there (`https://<token>@host/`), and so does
+ * a bare `?sk_live_x` and a `#access_token=` fragment. A URL with none of them
+ * comes back exactly as typed, because the label is also how check --diff
+ * pairs a server with its baseline, and normalising it would orphan every
+ * baseline. A secret in the path (`/mcp/<key>`) cannot be told from a route
+ * and is not masked.
  */
 export function redactUrl(input: string): string {
   let u: URL;
@@ -70,16 +73,32 @@ export function redactUrl(input: string): string {
   } catch {
     return input;
   }
-  if (!u.username && !u.password && !u.search) return input;
+  if (!u.username && !u.password && !u.search && !u.hash) return input;
   if (u.username) u.username = "***";
   if (u.password) u.password = "***";
-  if (u.search) u.search = new URLSearchParams([...u.searchParams].map(([k, v]) => [k, v ? "***" : ""])).toString();
+  if (u.search) {
+    u.search = new URLSearchParams([...u.searchParams].map(([k, v]) => (v ? [k, "***"] : ["***", ""])))
+      .toString()
+      .replace(/(^|&)\*\*\*=(?=&|$)/g, "$1***");
+  }
+  u.hash = "";
   return u.href;
 }
 
 /** Every http(s) URL in a piece of text, through redactUrl. fetch quotes the whole URL when it refuses one. */
 export function redactUrlsIn(text: string): string {
   return text.replace(/https?:\/\/[^\s"'<>]+/gi, (m) => redactUrl(m));
+}
+
+/**
+ * A command line as it may be printed: its URLs through redactUrl and a bearer
+ * token as `***`. mcp-remote and its kind take the URL and an
+ * `Authorization: Bearer` header as arguments, and a stdio label was the
+ * command as typed. A command with neither comes back unchanged, so its
+ * baseline still pairs. Other secrets in arguments are not recognised.
+ */
+export function redactSecretsIn(text: string): string {
+  return redactUrlsIn(text).replace(/\b(Bearer\s+)[^\s"']+/gi, "$1***");
 }
 
 function hasSkillFile(dir: string): boolean {

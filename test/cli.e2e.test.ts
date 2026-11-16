@@ -351,6 +351,23 @@ describe.skipIf(!built)("secrets in a URL stay out of the output", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("in a --client stdio entry's arguments", () => {
+    // The listing printed a stdio entry's command line as written, and
+    // mcp-remote takes the URL and the auth header as arguments.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-stdiocfg-"));
+    try {
+      fs.mkdirSync(path.join(dir, ".vscode"));
+      const args = ["does-not-exist.mjs", "http://127.0.0.1:9/mcp?api_key=abc123", "--header", "Authorization: Bearer tok123"];
+      fs.writeFileSync(path.join(dir, ".vscode", "mcp.json"), JSON.stringify({ servers: { remote: { command: "node", args } } }));
+      const r = run(["weigh", "--client", "vscode", "--timeout", "5"], dir);
+      expect(r.code).toBe(2);
+      expect(r.err).toContain("remote: node does-not-exist.mjs http://127.0.0.1:9/mcp?api_key=*** --header Authorization: Bearer ***");
+      expect(r.err + r.out).not.toMatch(/abc123|tok123/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 // `--out base.json --diff base.json` is the natural ratchet: compare with the

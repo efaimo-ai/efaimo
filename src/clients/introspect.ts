@@ -4,7 +4,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { SSEClientTransport } from "@modelcontextprotocol/client";
 import type { ServerIntrospection, ToolDef, ResourceDef, PromptDef } from "../core/types.js";
-import { redactUrlsIn, type ResolvedTarget } from "../targets/resolve.js";
+import { redactSecretsIn, redactUrlsIn, type ResolvedTarget } from "../targets/resolve.js";
 import { introspectStateless } from "./stateless.js";
 import { minimalChildEnv } from "../util/childEnv.js";
 import { withTimeout } from "../util/misc.js";
@@ -244,7 +244,7 @@ function connectError(e: unknown, label: string, stderr: string): Error {
   const base = redactUrlsIn(e instanceof Error ? e.message : String(e));
   // The server wrote this, so it gets one line (it cannot start a line of its
   // own in the error), its URLs redacted and no control characters.
-  const said = safeText(redactUrlsIn(stderr)).replace(/\s+/g, " ").trim();
+  const said = safeText(redactSecretsIn(stderr)).replace(/\s+/g, " ").trim();
   // Cut after redaction, so a cut cannot reopen a URL.
   const shown = said.length > 400 ? `${said.slice(0, 160)} ... ${said.slice(-235)}` : said;
   const hint = shown ? `\n  server stderr: ${shown}` : "";
