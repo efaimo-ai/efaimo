@@ -1,6 +1,7 @@
 {
   "name": "efaimo",
   "version": "0.6.1",
+  "mcpName": "io.github.efaimo-ai/efaimo",
   "description": "Audit what your agent loads: quality and context cost for MCP servers and Agent Skills",
   "keywords": [
     "mcp",

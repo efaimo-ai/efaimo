@@ -40,6 +40,26 @@ describe("meta", () => {
     expect(m![1]).toBe(pkg.version);
   });
 
+  // server.json is what the release workflow sends to the MCP Registry, and it
+  // carries the version twice, the listing's and the npm package's. Either one
+  // left behind at a bump would list a version that is not what npx installs.
+  // The registry matches its name against package.json's mcpName on npm.
+  it("server.json names package.json's version, name and mcpName", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as { name: string; version: string; mcpName: string };
+    const server = JSON.parse(fs.readFileSync(path.join(root, "server.json"), "utf8")) as {
+      name: string;
+      version: string;
+      description: string;
+      packages: { registryType: string; identifier: string; version: string }[];
+    };
+    expect(server.name).toBe(pkg.mcpName);
+    expect(server.version).toBe(pkg.version);
+    expect(server.packages).toHaveLength(1);
+    expect(server.packages[0]).toMatchObject({ registryType: "npm", identifier: pkg.name, version: pkg.version });
+    // The registry rejects a description over 100 characters at publish time.
+    expect(server.description.length).toBeLessThanOrEqual(100);
+  });
+
   it("rule ids are unique", () => {
     const ids = ALL_RULES.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);

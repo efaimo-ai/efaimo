@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.efaimo-ai/efaimo",
+  "description": "Read-only tools that grade an Agent Skill and measure its context-window token cost",
+  "repository": {
+    "url": "https://github.com/efaimo-ai/efaimo",
+    "source": "github"
+  },
+  "websiteUrl": "https://efaimo.com",
+  "version": "0.6.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "efaimo",
+      "version": "0.6.1",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}
