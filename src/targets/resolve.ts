@@ -53,12 +53,15 @@ export function resolveTarget(input: string, opts: ResolveOptions = {}): Resolve
 }
 
 /**
- * A URL as it may be printed: the password and every query value become `***`.
+ * A URL as it may be printed: the username, the password and every query value
+ * become `***`.
  *
  * The label is what the report, an --out file and a diff all show, and a key
- * passed as `?api_key=` landed in all three verbatim. A URL with neither comes
- * back exactly as typed, because the label is also how check --diff pairs a
- * server with its baseline, and normalising it would orphan every baseline.
+ * passed as `?api_key=` landed in all three verbatim. The username goes too,
+ * because some hosts take a token there (`https://<token>@host/`). A URL with
+ * none of them comes back exactly as typed, because the label is also how
+ * check --diff pairs a server with its baseline, and normalising it would
+ * orphan every baseline.
  */
 export function redactUrl(input: string): string {
   let u: URL;
@@ -67,7 +70,8 @@ export function redactUrl(input: string): string {
   } catch {
     return input;
   }
-  if (!u.password && !u.search) return input;
+  if (!u.username && !u.password && !u.search) return input;
+  if (u.username) u.username = "***";
   if (u.password) u.password = "***";
   if (u.search) u.search = new URLSearchParams([...u.searchParams].map(([k, v]) => [k, v ? "***" : ""])).toString();
   return u.href;

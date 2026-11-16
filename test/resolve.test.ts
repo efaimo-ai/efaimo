@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveTarget } from "../src/targets/resolve.js";
+import { redactUrl, redactUrlsIn, resolveTarget } from "../src/targets/resolve.js";
 
 describe("resolveTarget", () => {
   it("errors on a non-existent --skill/--repo path instead of spawning it as a command", () => {
@@ -26,17 +26,31 @@ describe("resolveTarget", () => {
 
   // The label is what the report, an --out file and a diff all print, and it
   // was the input verbatim, so a key passed as `?api_key=` landed in all three.
-  it("keeps a URL's password and query values out of the label", () => {
+  it("keeps a URL's userinfo and query values out of the label", () => {
     const url = "https://me:hunter2@mcp.example.com/mcp?token=abc123&region=eu";
     const t = resolveTarget(url, {});
     expect(t).toMatchObject({ kind: "http", url });
-    expect(t.label).toBe("https://me:***@mcp.example.com/mcp?token=***&region=***");
+    expect(t.label).toBe("https://***:***@mcp.example.com/mcp?token=***&region=***");
+  });
+
+  // A host that takes a token as the username (https://<token>@host/) has no
+  // password and no query, and masking only those printed the token as typed.
+  it("masks a token in the username position", () => {
+    const t = resolveTarget("https://ghp_secret@mcp.example.com/x", {});
+    expect(t.label).toBe("https://***@mcp.example.com/x");
+    expect(redactUrl("http://ghp_secret:@127.0.0.1:9/mcp")).toBe("http://***@127.0.0.1:9/mcp");
+  });
+
+  // fetch refuses a URL with credentials and quotes the whole URL in its message.
+  it("masks the username inside an error message too", () => {
+    const msg = redactUrlsIn("Request cannot be constructed from a URL that includes credentials: https://ghp_secret@mcp.example.com/x");
+    expect(msg).toBe("Request cannot be constructed from a URL that includes credentials: https://***@mcp.example.com/x");
   });
 
   // The label is also how check --diff pairs a server with its baseline, so a
   // URL with nothing to hide must not be normalised into a different string.
   it("leaves a URL with nothing to hide exactly as typed", () => {
-    for (const url of ["https://mcp.example.com", "HTTP://Example.com:443/mcp", "https://me@mcp.example.com/mcp#frag"]) {
+    for (const url of ["https://mcp.example.com", "HTTP://Example.com:443/mcp", "https://mcp.example.com/mcp#frag"]) {
       expect(resolveTarget(url, {}).label).toBe(url);
     }
   });

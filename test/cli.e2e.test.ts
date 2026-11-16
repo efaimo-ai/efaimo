@@ -283,25 +283,30 @@ describe.skipIf(!built)("text from the audited side cannot drive the terminal", 
 // "connecting to", the final error, the --client listing, and through the
 // label the report itself. fetch also refuses a URL with credentials and puts
 // the whole URL in its message, so the error line leaked it a second time.
+// The username is masked as well: a host that takes a token as the username
+// (https://<token>@host/) put it in the same lines with no password to mask.
 describe.skipIf(!built)("secrets in a URL stay out of the output", () => {
-  const url = "http://me:hunter2@127.0.0.1:9/mcp?token=abc123";
+  const cases = [
+    { url: "http://me:hunter2@127.0.0.1:9/mcp?token=abc123", shown: "http://***:***@127.0.0.1:9/mcp?token=***", secret: /\/\/me[:@]|hunter2|abc123/ },
+    { url: "http://ghp_secret@127.0.0.1:9/mcp", shown: "http://***@127.0.0.1:9/mcp", secret: /ghp_secret/ },
+  ];
 
-  it("as the target", () => {
+  it.each(cases)("as the target: $shown", ({ url, shown, secret }) => {
     const r = run(["weigh", url, "--timeout", "5"]);
     expect(r.code).toBe(2);
-    expect(r.err).toMatch(/me:\*\*\*@127\.0\.0\.1:9\/mcp\?token=\*\*\*/);
-    expect(r.err + r.out).not.toMatch(/hunter2|abc123/);
+    expect(r.err).toContain(`connecting to ${shown} ...`);
+    expect(r.err + r.out).not.toMatch(secret);
   });
 
-  it("in a --client config", () => {
+  it.each(cases)("in a --client config: $shown", ({ url, shown, secret }) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-urlcfg-"));
     try {
       fs.mkdirSync(path.join(dir, ".vscode"));
       fs.writeFileSync(path.join(dir, ".vscode", "mcp.json"), JSON.stringify({ servers: { remote: { url } } }));
       const r = run(["weigh", "--client", "vscode", "--timeout", "5"], dir);
       expect(r.code).toBe(2);
-      expect(r.err).toMatch(/remote: http:\/\/me:\*\*\*@/);
-      expect(r.err + r.out).not.toMatch(/hunter2|abc123/);
+      expect(r.err).toContain(`remote: ${shown}`);
+      expect(r.err + r.out).not.toMatch(secret);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
