@@ -400,7 +400,7 @@ method and its known bias are in [docs/METHODOLOGY.md](./docs/METHODOLOGY.md).
 
 Built by [efaimo ai](https://efaimo.ai), open tooling for the space between hosts
 and tools. `efaimo` is the flagship CLI; capabilities grow as subcommands under one
-name. Apache-2.0. See [CONTRIBUTING.md](./CONTRIBUTING.md) and
+name. Its site is [efaimo.com](https://efaimo.com). Apache-2.0. See [CONTRIBUTING.md](./CONTRIBUTING.md) and
 [docs/RULES.md](./docs/RULES.md) to add a rule.
 
 EFAIMO AI is a registered trademark of the publisher (KR 40-2585820, class 42).
