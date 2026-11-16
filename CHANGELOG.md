@@ -18,6 +18,14 @@ tag, never in the tag commit, because registries render the tagged tree.
   long one lost exactly that line. The hint now shows the start and the end
   with ` ... ` between them, because Node prints its reason first.
 
+- **A run that fails on every `--client` server leaves none of them running**
+  _(unreleased)_. The probe session that tries a server without a handshake
+  closed its stdin and left the hard kill to a timer 200ms later. When every
+  target failed, the CLI printed its error and exited at once, the timer never
+  fired, and on Windows the last server, a `.cmd` wrapper's child, kept
+  running after efaimo had exited. Every server still running when the process
+  exits is now killed on the way out, its whole tree on Windows.
+
 ### Security
 
 - **A server that connected keeps its stderr out of the report**

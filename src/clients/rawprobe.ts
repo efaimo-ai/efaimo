@@ -109,12 +109,28 @@ export class StdioSession {
   exited = false;
   exitCode: number | null = null;
 
+  /**
+   * Sessions whose server has not exited. kill() leaves the hard kill to a
+   * 200ms timer, and fail() calls process.exit before it fires when every
+   * --client target failed, so the last server outlived the CLI. The exit
+   * handler is synchronous, and so is the kill it does.
+   */
+  private static live = new Set<StdioSession>();
+  private static reaperOn = false;
+
   constructor(command: string, args: string[], env?: Record<string, string>) {
     this.proc = crossSpawn(command, args, {
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...minimalChildEnv(), ...(env ?? {}) },
       windowsHide: true,
     });
+    StdioSession.live.add(this);
+    if (!StdioSession.reaperOn) {
+      StdioSession.reaperOn = true;
+      process.once("exit", () => {
+        for (const s of StdioSession.live) s.hardKill();
+      });
+    }
     this.proc.stdout?.on("data", (c: Buffer) => this.onData(c.toString("utf8")));
     this.proc.stderr?.on("data", (c: Buffer) => {
       if (this.stderrTail.length < 2048) this.stderrTail += c.toString("utf8");
@@ -122,6 +138,7 @@ export class StdioSession {
     const finish = (code: number | null) => {
       this.exited = true;
       this.exitCode = code;
+      StdioSession.live.delete(this);
       for (const resolve of this.pending.values()) resolve({ procExit: code });
       this.pending.clear();
     };

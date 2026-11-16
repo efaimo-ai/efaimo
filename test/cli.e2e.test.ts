@@ -279,6 +279,46 @@ describe.skipIf(!built)("text from the audited side cannot drive the terminal", 
   });
 });
 
+// Windows only, where a .cmd server runs under a cmd.exe wrapper. kill()
+// closed stdin and left the tree kill to an unref'd 200ms timer, and when
+// every --client target failed, fail() called process.exit at once: the timer
+// never fired and the last server outlived the CLI. With one target both died.
+describe.skipIf(!built || process.platform !== "win32")("a failed run leaves no server behind", () => {
+  it("weigh --client where every server hangs", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "efaimo-orphan-"));
+    const pidFile = path.join(dir, "pids.txt");
+    const readPids = () =>
+      fs.existsSync(pidFile) ? fs.readFileSync(pidFile, "utf8").split("\n").filter(Boolean).map(Number) : [];
+    const alive = (pid: number) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    try {
+      const cmd = path.join(here, "fixtures", "mcp-server", "server-tree.cmd");
+      fs.mkdirSync(path.join(dir, ".vscode"));
+      fs.writeFileSync(
+        path.join(dir, ".vscode", "mcp.json"),
+        JSON.stringify({ servers: { a: { command: cmd, args: [pidFile] }, b: { command: cmd, args: [pidFile] } } }),
+      );
+      const r = run(["weigh", "--client", "vscode", "--timeout", "2"], dir);
+      expect(r.code).toBe(2);
+      const pids = readPids();
+      expect(pids.length, "the fixture never recorded a pid, so nothing was tested").toBeGreaterThan(0);
+      const deadline = Date.now() + 3000;
+      while (pids.some(alive) && Date.now() < deadline) await new Promise((res) => setTimeout(res, 100));
+      expect(pids.filter(alive), "a server outlived the CLI").toEqual([]);
+    } finally {
+      // The tree, so a survivor's cmd.exe wrapper does not keep holding dir.
+      for (const pid of readPids()) spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+    }
+  });
+});
+
 // A URL's password and query values reached every line that names the target:
 // "connecting to", the final error, the --client listing, and through the
 // label the report itself. fetch also refuses a URL with credentials and puts
