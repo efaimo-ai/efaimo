@@ -4,26 +4,21 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] 0.6.1
-
-Everything in this section is **(unreleased)**: it exists on `main` and not in
-what `npx efaimo` installs. These annotations come off in the commit BEFORE the
-tag, never in the tag commit, because registries render the tagged tree.
+## [0.6.1] - 2026-11-16
 
 ### Added
 
-- **`efaimo mcp` goes into the official MCP Registry with this release**
-  _(unreleased)_. `server.json` describes it as
-  the npm package `efaimo` over stdio with `mcp` as its argument, and
-  `package.json` now carries the `mcpName` the registry checks against,
-  `io.github.efaimo-ai/efaimo`. When 0.6.1 is tagged, the release workflow
-  publishes the listing in a job of its own that runs only after the npm
-  publish succeeded, so a registry failure leaves the npm release as it is.
+- **`efaimo mcp` goes into the official MCP Registry with this release**.
+  `server.json` describes it as the npm package `efaimo` over stdio with `mcp`
+  as its argument, and `package.json` now carries the `mcpName` the registry
+  checks against, `io.github.efaimo-ai/efaimo`. The release workflow publishes
+  the listing in a job of its own that runs only after the npm publish
+  succeeded, so a registry failure leaves the npm release as it is.
 
 ### Fixed
 
 - **A stdio server whose handshake fails is killed with its whole process
-  tree** _(unreleased)_. On Windows an npx or `.cmd` server runs under a
+  tree**. On Windows an npx or `.cmd` server runs under a
   cmd.exe wrapper, and the SDK's `close()` ends the wrapper alone. The success
   path already killed the tree with `taskkill /T`; the failure path only
   closed, so the real server outlived the audit holding efaimo's stdio pipes,
@@ -31,22 +26,22 @@ tag, never in the tag commit, because registries render the tagged tree.
   the tree kill. A `.cmd` fixture that never answers shows it: its server was
   still running after the error, and now it is not.
 
-- **A server that dies during the handshake keeps its stderr in the error**
-  _(unreleased)_. The listener on the child's stderr was attached only after
+- **A server that dies during the handshake keeps its stderr in the error**.
+  The listener on the child's stderr was attached only after
   `connect()` succeeded, so a server that exited before answering `initialize`
   (a missing module, a missing key, a bad flag) failed with `Connection closed`
   and the line saying why was dropped. It is attached before connecting now,
   and the error carries `server stderr:` with what the server wrote.
 
-- **`--out` and `--diff` naming the same file compare with the old run**
-  _(unreleased)_. `weigh` and `check` both wrote `--out` before reading
+- **`--out` and `--diff` naming the same file compare with the old run**.
+  `weigh` and `check` both wrote `--out` before reading
   `--diff`, so `--diff base.json --out base.json`, the one-command ratchet,
   read back the run it had just written and reported no change whatever had
   changed. The baseline is read first now, and the new run is saved after. In
   `weigh` a baseline that cannot be read now stops the run before the results
   print, as it already did in `check`.
 
-- **The Action takes the server as its own input** _(unreleased)_. `command`
+- **The Action takes the server as its own input**. `command`
   is expanded unquoted so a subcommand and its flags split into words, and
   bash does not re-read quotes inside a value, so the example the input's own
   description gave, `weigh "npx -y my-server"`, reached efaimo as `"npx`, `-y`
@@ -57,8 +52,8 @@ tag, never in the tag commit, because registries render the tagged tree.
 
 ### Security
 
-- **The CLI's own lines strip terminal control characters too**
-  _(unreleased)_. The reports already passed text from the audited side
+- **The CLI's own lines strip terminal control characters too**.
+  The reports already passed text from the audited side
   through `safeText`; the lines the CLI prints around them did not. The
   `--client` listing of what is about to run and the skip lines print a config
   entry's name and command, so an entry named `ESC[2K...` could erase the line
@@ -67,7 +62,7 @@ tag, never in the tag commit, because registries render the tagged tree.
   `check --diff` tables printed tool and skill names raw as well. All of them
   are filtered now.
 
-- **A key in a URL stays out of the output** _(unreleased)_. An http target's
+- **A key in a URL stays out of the output**. An http target's
   label was the URL as typed, and the label is what the report, an `--out` file
   and a diff all print, so a key passed as `?api_key=`, or a token some hosts
   take as the username (`https://<token>@host/`), was published by each of
@@ -80,7 +75,7 @@ tag, never in the tag commit, because registries render the tagged tree.
   by 0.6.0 for such a URL names the server by its full URL and will not pair
   with a new run; write it again.
 
-- **A link inside a skill is not followed out of it** _(unreleased)_. Whether
+- **A link inside a skill is not followed out of it**. Whether
   a referenced file stays inside the skill was decided on its path as written,
   so `references/notes.md` passed while the read went through a symbolic link
   (a junction on Windows) to anywhere on the disk, and `weigh` published the
@@ -615,6 +610,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[0.6.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.6.1
 [0.6.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.6.0
 [0.5.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.5.0
 [0.4.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.4.0

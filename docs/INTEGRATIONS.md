@@ -31,7 +31,7 @@ Fail the build on skill regressions or a context-budget blowout.
 
 An MCP server goes in `target`, which reaches efaimo as one argument with its
 spaces intact; `command` is split on spaces and cannot carry a quoted server
-command _(unreleased: `target` arrives with the next release)_:
+command:
 
 ```yaml
 - uses: efaimo-ai/efaimo@v0
