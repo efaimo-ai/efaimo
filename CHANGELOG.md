@@ -10,6 +10,16 @@ Everything in this section is **(unreleased)**: it exists on `main` and not in
 what `npx efaimo` installs. These annotations come off in the commit BEFORE the
 tag, never in the tag commit, because registries render the tagged tree.
 
+### Added
+
+- **`efaimo mcp` goes into the official MCP Registry with this release**
+  _(unreleased)_. `server.json` describes it as
+  the npm package `efaimo` over stdio with `mcp` as its argument, and
+  `package.json` now carries the `mcpName` the registry checks against,
+  `io.github.efaimo-ai/efaimo`. When 0.6.1 is tagged, the release workflow
+  publishes the listing in a job of its own that runs only after the npm
+  publish succeeded, so a registry failure leaves the npm release as it is.
+
 ### Fixed
 
 - **A stdio server whose handshake fails is killed with its whole process
@@ -59,9 +69,11 @@ tag, never in the tag commit, because registries render the tagged tree.
 
 - **A key in a URL stays out of the output** _(unreleased)_. An http target's
   label was the URL as typed, and the label is what the report, an `--out` file
-  and a diff all print, so a key passed as `?api_key=` was published by each of
-  them. The label now shows the password and every query value as `***`; a URL
-  with neither is left exactly as typed, so existing baselines still pair. The
+  and a diff all print, so a key passed as `?api_key=`, or a token some hosts
+  take as the username (`https://<token>@host/`), was published by each of
+  them. The label now shows the username, the password and every query value
+  as `***`; a URL with none of them is left exactly as typed, so existing
+  baselines still pair. The
   `--client` listing, the conformance command line and connection errors are
   redacted the same way, the last because fetch refuses a URL with credentials
   and quotes the whole URL in its message. A `check --diff` baseline written
