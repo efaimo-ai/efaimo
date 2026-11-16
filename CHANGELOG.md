@@ -4,29 +4,25 @@ All notable changes to efaimo are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] 0.6.2
-
-Everything in this section is **(unreleased)**: it exists on `main` and not in
-what `npx efaimo` installs. These annotations come off in the commit BEFORE the
-tag, never in the tag commit, because registries render the tagged tree.
+## [0.6.2] - 2026-11-16
 
 ### Fixed
 
-- **A failed server's `server stderr:` keeps the end of what it wrote**
-  _(unreleased)_. The hint kept the first 400 characters of the first 2 KB,
+- **A failed server's `server stderr:` keeps the end of what it wrote**.
+  The hint kept the first 400 characters of the first 2 KB,
   and a Python traceback prints the line that says what went wrong last, so a
   long one lost exactly that line. The hint now shows the start and the end
   with ` ... ` between them, because Node prints its reason first.
 
-- **A run that fails on every `--client` server leaves none of them running**
-  _(unreleased)_. The probe session that tries a server without a handshake
+- **A run that fails on every `--client` server leaves none of them running**.
+  The probe session that tries a server without a handshake
   closed its stdin and left the hard kill to a timer 200ms later. When every
   target failed, the CLI printed its error and exited at once, the timer never
   fired, and on Windows the last server, a `.cmd` wrapper's child, kept
   running after efaimo had exited. Every server still running when the process
   exits is now killed on the way out, its whole tree on Windows.
 
-- **A baseline `--diff` refuses is still there afterwards** _(unreleased)_.
+- **A baseline `--diff` refuses is still there afterwards**.
   `weigh` read the `--diff` file before writing `--out` but parsed it after,
   so `weigh --diff base.json --out base.json` with a broken `base.json` printed
   the results, overwrote the file with this run and only then exited 2.
@@ -38,22 +34,22 @@ tag, never in the tag commit, because registries render the tagged tree.
   holding `null` stopped either command with a raw `TypeError`; it is now
   refused in words.
 
-- **The Action's `command` is split into words and nothing more**
-  _(unreleased)_. It is expanded unquoted so that a subcommand and its flags
+- **The Action's `command` is split into words and nothing more**.
+  It is expanded unquoted so that a subcommand and its flags
   split, and that also ran pathname expansion, so a `*` in it turned into
   whatever files the runner's working directory held. The step now turns
   globbing off first, and a `*` reaches efaimo as typed.
 
 - **`check --repo` reads `package.json` the way it reads the Python
-  manifests** _(unreleased)_. `pyproject.toml` and the requirements files were
+  manifests**. `pyproject.toml` and the requirements files were
   read through the 64 KB cap that also refuses anything but a regular file,
   and `package.json` went through a plain read with neither. It takes the same
   path now, so a `package.json` over 64 KB no longer names an SDK.
 
 ### Security
 
-- **A server that connected keeps its stderr out of the report**
-  _(unreleased)_. 0.6.1 attached the stderr listener before the handshake so
+- **A server that connected keeps its stderr out of the report**.
+  0.6.1 attached the stderr listener before the handshake so
   that a failed one could say why, and the success path went on adding the
   first 300 characters of what the server wrote to the report's notes. A key,
   token or URL a server logs at startup then went out in the terminal, `--out`,
@@ -64,8 +60,8 @@ tag, never in the tag commit, because registries render the tagged tree.
   in the terminal and as escaped text in `--md`, where links and inline HTML in
   a note used to render.
 
-- **The masking of secrets in what efaimo prints has fewer gaps**
-  _(unreleased)_. A query key with no value (`?sk_live_x`) printed as
+- **The masking of secrets in what efaimo prints has fewer gaps**.
+  A query key with no value (`?sk_live_x`) printed as
   `?sk_live_x=`, so the key itself, often the secret, went out; it is now
   `?***`. A fragment (`#access_token=...`) passed as typed; it is now dropped.
   A stdio target's label was its command line as typed, and `mcp-remote` and
@@ -81,14 +77,14 @@ tag, never in the tag commit, because registries render the tagged tree.
   other secret passed as an argument, such as `--api-key abc` or an
   `X-API-Key` header.
 
-- **A `check --diff` baseline cannot write lines of its own into the diff**
-  _(unreleased)_. The `version` and `rulesVersion` in the baseline file went
+- **A `check --diff` baseline cannot write lines of its own into the diff**.
+  The `version` and `rulesVersion` in the baseline file went
   into the diff's header line and its notes as written, and the baseline is
   a file anyone can edit, a pull request in CI among them. Those lines now
   lose their control characters and newlines like every table cell.
 
-- **A link out of a skill is caught when the skill is named by a `\\?\` path**
-  _(unreleased)_. 0.6.1 decided containment on real paths, but Node's
+- **A link out of a skill is caught when the skill is named by a `\\?\` path**.
+  0.6.1 decided containment on real paths, but Node's
   `realpathSync` throws on a Windows extended-length path, a reference with no
   real path counted as inside, and the link out was read. Real paths now come
   from the native call, and a reference that is there but has no real path
@@ -96,8 +92,8 @@ tag, never in the tag commit, because registries render the tagged tree.
   reference leads before whether it exists, so a link out to nothing gets the
   same `not read:` note as a link out to something.
 
-- **A `SKILL.md` that is itself a link out of the skill is not read**
-  _(unreleased)_. Naming a skill directory read its `SKILL.md` wherever a
+- **A `SKILL.md` that is itself a link out of the skill is not read**.
+  Naming a skill directory read its `SKILL.md` wherever a
   symbolic link put it. It now has to resolve inside the skill like any
   reference; one that does not fails S101 with a parse error that says so. A
   skill whose whole directory is reached through a link still reads, because
@@ -709,6 +705,7 @@ First release.
   Documented rule set (`docs/RULES.md`), token methodology (`docs/METHODOLOGY.md`),
   and integration guide (`docs/INTEGRATIONS.md`).
 
+[0.6.2]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.6.2
 [0.6.1]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.6.1
 [0.6.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.6.0
 [0.5.0]: https://github.com/efaimo-ai/efaimo/releases/tag/v0.5.0
