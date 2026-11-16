@@ -38,6 +38,12 @@ tag, never in the tag commit, because registries render the tagged tree.
   holding `null` stopped either command with a raw `TypeError`; it is now
   refused in words.
 
+- **The Action's `command` is split into words and nothing more**
+  _(unreleased)_. It is expanded unquoted so that a subcommand and its flags
+  split, and that also ran pathname expansion, so a `*` in it turned into
+  whatever files the runner's working directory held. The step now turns
+  globbing off first, and a `*` reaches efaimo as typed.
+
 ### Security
 
 - **A server that connected keeps its stderr out of the report**

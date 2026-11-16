@@ -65,4 +65,10 @@ describe.skipIf(!bash)("action.yml", () => {
       "--strict",
     ]);
   });
+
+  it("splits command into words without expanding a glob in it", () => {
+    // Unquoted, the value also went through pathname expansion, so a `*` in
+    // it became whatever the runner's working directory happened to hold.
+    expect(argvFor({ command: "check --skill *" })).toEqual(["-y", "efaimo@latest", "check", "--skill", "*"]);
+  });
 });

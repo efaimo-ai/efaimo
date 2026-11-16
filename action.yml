@@ -42,4 +42,7 @@ runs:
       # quotes inside a value, though, so the `weigh "npx -y my-server"` this
       # file used to suggest reached efaimo as three broken words. `target` is
       # passed as one quoted word, and as nothing at all when it is empty.
-      run: npx -y "efaimo@$EFAIMO_VERSION" $EFAIMO_COMMAND ${EFAIMO_TARGET:+"$EFAIMO_TARGET"}
+      # `set -f`: split, but do not expand a `*` against the runner's files.
+      run: |
+        set -f
+        npx -y "efaimo@$EFAIMO_VERSION" $EFAIMO_COMMAND ${EFAIMO_TARGET:+"$EFAIMO_TARGET"}
