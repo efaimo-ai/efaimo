@@ -487,12 +487,15 @@ export function renderCheckDiffPretty(d: CheckDiffResult): string {
   lines.push(
     `diff check  ${paint(pc.bold, `${d.paired} paired`)}${d.added.length ? `, ${d.added.length} added` : ""}${d.removed.length ? `, ${d.removed.length} removed` : ""}`,
   );
+  // cell(): the versions come from the baseline file, which anyone can edit.
   lines.push(
     paint(
       pc.dim,
-      d.rulesDrift
-        ? `efaimo ${d.versions.before} -> ${d.versions.after}, rules ${d.rulesVersions.before} -> ${d.rulesVersions.after}  DRIFTED`
-        : `efaimo ${d.versions.before} -> ${d.versions.after}, rules ${rules} on both sides`,
+      cell(
+        d.rulesDrift
+          ? `efaimo ${d.versions.before} -> ${d.versions.after}, rules ${d.rulesVersions.before} -> ${d.rulesVersions.after}  DRIFTED`
+          : `efaimo ${d.versions.before} -> ${d.versions.after}, rules ${rules} on both sides`,
+      ),
     ),
   );
   lines.push("");
@@ -532,6 +535,6 @@ export function renderCheckDiffPretty(d: CheckDiffResult): string {
     lines.push("");
   }
 
-  for (const n of d.notes) lines.push(paint(pc.dim, `  ${n}`));
+  for (const n of d.notes) lines.push(paint(pc.dim, `  ${cell(n)}`));
   return lines.join("\n");
 }

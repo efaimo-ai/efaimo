@@ -69,6 +69,12 @@ tag, never in the tag commit, because registries render the tagged tree.
   other secret passed as an argument, such as `--api-key abc` or an
   `X-API-Key` header.
 
+- **A `check --diff` baseline cannot write lines of its own into the diff**
+  _(unreleased)_. The `version` and `rulesVersion` in the baseline file went
+  into the diff's header line and its notes as written, and the baseline is
+  a file anyone can edit, a pull request in CI among them. Those lines now
+  lose their control characters and newlines like every table cell.
+
 - **A link out of a skill is caught when the skill is named by a `\\?\` path**
   _(unreleased)_. 0.6.1 decided containment on real paths, but Node's
   `realpathSync` throws on a Windows extended-length path, a reference with no

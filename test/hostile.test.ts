@@ -261,4 +261,28 @@ describe("a hostile name cannot drive the terminal through a diff", () => {
     expect(out.match(/evil/g)).toHaveLength(2);
     expect(out.includes(ESC), "an escape byte reached the diff").toBe(false);
   });
+
+  it("check --diff: the baseline's version and rulesVersion", () => {
+    // The baseline is a file anyone can edit, a pull request in CI among them,
+    // and its version strings went into the header line and the notes raw.
+    setColor(false);
+    const forged = `${evil}\nworsened 0`;
+    const out = renderCheckDiffPretty({
+      kind: "check",
+      versions: { before: forged, after: "0.6.2" },
+      rulesVersions: { before: forged, after: "3" },
+      rulesDrift: true,
+      paired: 0,
+      added: [],
+      removed: [],
+      improved: [],
+      worsened: [],
+      held: 0,
+      findingCounts: { before: 0, after: 0 },
+      costs: [],
+      notes: [`the two runs used efaimo ${forged} and 0.6.2`],
+    });
+    expect(out.includes(ESC), "an escape byte reached the diff").toBe(false);
+    expect(out.split("\n").some((l) => /^\s*worsened 0/.test(l)), "a line of the baseline's own").toBe(false);
+  });
 });
